@@ -2,7 +2,7 @@
 
 #include "linearalgebra.h"
 
-int main(void) {
+int TestLinearAlgebra(void) {
     printf("Hello, World!\n");
 
     Matrix *m1 = InitMatrix(5, 3, 3);
