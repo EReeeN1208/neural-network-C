@@ -37,7 +37,7 @@ double ParametricLeakyRelu(double x, double a) {
 */
 
 Matrix* ActivateMatrix(Matrix *m, double (*aFunc)(double)) {
-    Matrix *mResult = NewMatrix(m->r, m->c);
+    Matrix *mResult = NewEmptyMatrix(m->r, m->c);
     const unsigned int size = m->r * m->r;
 
     for (int i = 0; i < size; i++) {
@@ -48,7 +48,7 @@ Matrix* ActivateMatrix(Matrix *m, double (*aFunc)(double)) {
 }
 
 Vector* ActivateVector(Vector *v, double (*aFunc)(double)) {
-    Vector *vResult = NewVector(v->size);
+    Vector *vResult = NewEmptyVector(v->size);
 
     for (int i = 0; i < v->size; i++) {
         vResult->values[i] = aFunc(v->values[i]);

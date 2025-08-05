@@ -11,4 +11,6 @@ add_executable(c_neural_net src/main.c
         src/activationFunctions.c
         src/tests.h
         src/csv.c
-        src/csv.h)
+        src/csv.h
+        src/mnist.c
+        src/mnist.h)

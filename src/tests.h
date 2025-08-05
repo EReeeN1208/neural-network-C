@@ -6,5 +6,6 @@
 #define TESTS_H
 
 int TestLinearAlgebra(void);
+int TestCSV(void);
 
 #endif //TESTS_H

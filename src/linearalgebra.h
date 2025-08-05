@@ -17,15 +17,15 @@ typedef struct {
     unsigned int r, c;
 } Matrix;
 
-Matrix* NewMatrix(unsigned int r, unsigned int c);
-Matrix* InitMatrix(unsigned int r, unsigned int c, double fill);
-Matrix* InitMatrixIncremental(unsigned int r, unsigned int c);
+Matrix* NewEmptyMatrix(unsigned int r, unsigned int c);
+Matrix* NewFilledMatrix(unsigned int r, unsigned int c, double fill);
+Matrix* NewIncrementalMatrix(unsigned int r, unsigned int c);
 Matrix* GetIdentityMatrix(unsigned int len);
 void FreeMatrix(Matrix *m);
 
-Vector* NewVector(unsigned int size);
-Vector* InitVector(unsigned int size, double fill);
-Vector* InitVectorIncremental(unsigned int size);
+Vector* NewEmptyVector(unsigned int size);
+Vector* NewFilledVector(unsigned int size, double fill);
+Vector* NewIncrementalVector(unsigned int size);
 void FreeVector(Vector *v);
 
 Matrix* MatrixMultiply(Matrix *m1, Matrix *m2);

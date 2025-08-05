@@ -5,5 +5,7 @@
 #include "tests.h"
 
 int main(void) {
-    TestLinearAlgebra();
+    //TestLinearAlgebra();
+
+    TestCSV();
 }

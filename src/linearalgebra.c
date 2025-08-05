@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-Matrix* NewMatrix(unsigned int r, unsigned int c) {
+Matrix* NewEmptyMatrix(unsigned int r, unsigned int c) {
     Matrix *m = malloc(sizeof(Matrix));
     const unsigned int size = r * c;
     m->r = r;
@@ -17,8 +17,8 @@ Matrix* NewMatrix(unsigned int r, unsigned int c) {
     return m;
 }
 
-Matrix* InitMatrix(unsigned int r, unsigned int c, double fill) {
-    Matrix *m = NewMatrix(r, c);
+Matrix* NewFilledMatrix(unsigned int r, unsigned int c, double fill) {
+    Matrix *m = NewEmptyMatrix(r, c);
 
     const unsigned int size = r * c;
 
@@ -30,8 +30,8 @@ Matrix* InitMatrix(unsigned int r, unsigned int c, double fill) {
     return m;
 }
 
-Matrix* InitMatrixIncremental(unsigned int r, unsigned int c) {
-    Matrix *m = NewMatrix(r, c);
+Matrix* NewIncrementalMatrix(unsigned int r, unsigned int c) {
+    Matrix *m = NewEmptyMatrix(r, c);
 
     const unsigned int size = r * c;
 
@@ -42,7 +42,7 @@ Matrix* InitMatrixIncremental(unsigned int r, unsigned int c) {
 }
 
 Matrix* GetIdentityMatrix(unsigned int len) {
-    Matrix *m = InitMatrix(len, len, 0);
+    Matrix *m = NewFilledMatrix(len, len, 0);
     for (unsigned i = 0; i < len*len; i += (len + 1)) {
         m->values[i] = 1;
     }
@@ -54,15 +54,15 @@ void FreeMatrix(Matrix *m) {
     free(m);
 }
 
-Vector* NewVector(unsigned int size) {
+Vector* NewEmptyVector(unsigned int size) {
     Vector *v = malloc(sizeof(Vector));
     v->size = size;
     v->values = malloc(size * sizeof(double));
 
     return v;
 }
-Vector* InitVector(unsigned int size, double fill) {
-    Vector *v = NewVector(size);
+Vector* NewFilledVector(unsigned int size, double fill) {
+    Vector *v = NewEmptyVector(size);
 
     for (int i = 0; i < size; i++) {
         v->values[i] = fill;
@@ -71,8 +71,8 @@ Vector* InitVector(unsigned int size, double fill) {
     return v;
 }
 
-Vector* InitVectorIncremental(unsigned int size) {
-    Vector *v = NewVector(size);
+Vector* NewIncrementalVector(unsigned int size) {
+    Vector *v = NewEmptyVector(size);
 
     for (int i = 0; i < size; i++) {
         v->values[i] = i;
@@ -91,7 +91,7 @@ Matrix* MatrixMultiply(Matrix *m1, Matrix *m2) {
         exit(-1);
     }
     int size = m1->r * m2->c;
-    Matrix *mResult = NewMatrix(m1->r, m2->c);
+    Matrix *mResult = NewEmptyMatrix(m1->r, m2->c);
 
     double sum;
     int r, c;
@@ -115,7 +115,7 @@ Vector* VectorMatrixMultiply(Matrix *m, Vector *v) {
         exit(-1);
     }
 
-    Vector *vResult = NewVector(m->r);
+    Vector *vResult = NewEmptyVector(m->r);
 
     double sum;
     for (int i = 0; i < vResult->size; i++) {
@@ -134,7 +134,7 @@ Matrix* MatrixAdd(Matrix *m1, Matrix *m2) {
     }
     int size = m1->r * m1->c;
 
-    Matrix *mResult = NewMatrix(m1->r, m1->c);
+    Matrix *mResult = NewEmptyMatrix(m1->r, m1->c);
 
     for (int i = 0; i < size; i++) {
         mResult->values[i] = m1->values[i] + m2->values[i];
@@ -146,7 +146,7 @@ Vector* VectorAdd(Vector *v1, Vector *v2) {
         fprintf(stderr, "Vectors not same size for addition");
     }
 
-    Vector *vResult = NewVector(v1->size);
+    Vector *vResult = NewEmptyVector(v1->size);
 
     for (int i = 0; i < v1->size; i++) {
         vResult->values[i] = v1->values[i] + v2->values[i];
@@ -157,7 +157,7 @@ Vector* VectorAdd(Vector *v1, Vector *v2) {
 Matrix* TransposeMatrix(Matrix *m) {
     unsigned int size = m->r * m->c;
 
-    Matrix* mResult = NewMatrix(m->c, m->r);
+    Matrix* mResult = NewEmptyMatrix(m->c, m->r);
 
     for (int i = 0; i < size; i++) {
         mResult->values[i] = GetMatrixValue(m, i % m->c, i / m->c);

@@ -9,11 +9,20 @@
 
 #include "linearalgebra.h"
 
+
+
 typedef struct {
     FILE* file;
-    int lastLineRead;
+    unsigned int rows;
+    unsigned int lastLineRead;
 } CSVFile;
 
-CSVFile* OpenFile(char *path);
+CSVFile* OpenCSVFile(char *path);
+CSVFile* NewCSVStruct(FILE* file, unsigned int rows);
+unsigned int GetNextLine(CSVFile* csvfile, char* buffer, int maxline);
+unsigned int CountLines(char *path);
+
+void CSVInfo(CSVFile* csvfile);
+void FreeCSV(CSVFile* csvfile);
 
 #endif //CSV_H
