@@ -7,7 +7,8 @@ add_executable(c_neural_net src/main.c
         src/linearalgebra.h
         src/linearalgebra.c
         src/tests.c
-        src/activationfunctions.h
-        src/activationfunctions.c
-        src/activationfunctions.h
-        src/tests.h)
+        src/activationFunctions.h
+        src/activationFunctions.c
+        src/tests.h
+        src/csv.c
+        src/csv.h)

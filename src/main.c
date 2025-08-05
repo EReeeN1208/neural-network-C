@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "linearalgebra.h"
-#include "activationfunctions.h"
+#include "activationFunctions.h"
 #include "tests.h"
 
 int main(void) {
