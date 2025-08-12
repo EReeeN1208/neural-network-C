@@ -58,3 +58,18 @@ void FreeMnistDigit(MnistDigit *d) {
     FreeMatrix(d->pixels);
     free(d);
 }
+
+void PrintMnistDigit(MnistDigit *d) {
+    printf("\n\n/- digit: %d -------------------------------------------------------------------------\\\n", d->digit);
+
+    for (int i = 0; i<MNIST_DIGIT_SIDE_LEN; i++) {
+        printf("|");
+        for (int j = 0; j<MNIST_DIGIT_SIDE_LEN; j++) {
+            char c = CharShader((unsigned char)GetMatrixValue(d->pixels, i, j));
+            printf("%c%c%c", c, c, c);
+        }
+        printf("|\n");
+    }
+
+    printf("\\------------------------------------------------------------------------------------/\n");
+}

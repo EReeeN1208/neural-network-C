@@ -44,3 +44,7 @@ unsigned char StrToUChar(char *s, unsigned int maxLen) {
 
     return out;
 }
+
+char CharShader(unsigned char c) {
+    return SHADER_PALETTE[(c*SHADER_PALETTE_SIZE-1) / 255];
+}

@@ -20,6 +20,13 @@ int TestUtil(void) {
 
     char buff[maxLen];
 
+    printf(">%c<   >%c<   >%c<   >%c<   >%c<\n", CharShader(0), CharShader(50), CharShader(100), CharShader(240), CharShader(255));
+
+    for (int i = 0; i < 256; i++) {
+        printf("%c", CharShader(i));
+    }
+    printf("\n");
+
     strcpy(buff, "127");
     printf("%s, %d\n", buff, StrToInt(buff, maxLen));
 
@@ -69,6 +76,8 @@ int TestMnist(void) {
     printf("%d\n", d->digit);
 
     PrintMatrix(d->pixels);
+
+    PrintMnistDigit(d);
 
     return 0;
 }

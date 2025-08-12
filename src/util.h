@@ -5,8 +5,12 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-int StrToInt(char *s, unsigned int maxLen);
+#define SHADER_PALETTE " .-*=#"
+#define SHADER_PALETTE_SIZE 6
 
+int StrToInt(char *s, unsigned int maxLen);
 unsigned char StrToUChar(char *s, unsigned int maxLen);
+
+char CharShader(unsigned char c);
 
 #endif //UTIL_H

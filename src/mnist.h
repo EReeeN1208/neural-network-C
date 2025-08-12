@@ -17,6 +17,8 @@ typedef struct {
 
 int ReadDigitFromCSV(CSVFile *csv, MnistDigit *d);
 MnistDigit* NewMnistDigit();
+
 void FreeMnistDigit(MnistDigit *d);
+void PrintMnistDigit(MnistDigit *d);
 
 #endif //MNIST_H
