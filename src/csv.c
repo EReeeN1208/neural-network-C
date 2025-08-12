@@ -14,10 +14,10 @@ CSVFile* OpenCSVFile(char *path) {
 
     unsigned int lines = CountLines(path);
 
-    return NewCSVStruct(file, lines);
+    return NewCSV(file, lines);
 }
 
-CSVFile* NewCSVStruct(FILE* file, unsigned int rows) {
+CSVFile* NewCSV(FILE* file, unsigned int rows) {
     CSVFile *csv = malloc(sizeof(CSVFile));
 
     csv->file = file;
@@ -26,21 +26,37 @@ CSVFile* NewCSVStruct(FILE* file, unsigned int rows) {
 
     return csv;
 }
-unsigned int GetNextLine(CSVFile* csvfile, char* buffer, int maxline) {
+
+// Returns no# line read (counting from 1)
+int GetNextLine(CSVFile* csvfile, char* buffer) {
 
     if (csvfile->lastLineRead == csvfile->rows) {
         return -1;
     }
 
-    fgets(buffer, maxline, csvfile->file);
+    fgets(buffer, CSV_LINE_MAX_BUFF, csvfile->file);
 
-    return ++csvfile->lastLineRead;
+    return (int)++csvfile->lastLineRead;
+}
+
+int SkipLine(CSVFile* csvfile) {
+
+    if (csvfile->lastLineRead == csvfile->rows) {
+        return -1;
+    }
+
+    char buff[CSV_LINE_MAX_BUFF];
+
+    fgets(buff, CSV_LINE_MAX_BUFF, csvfile->file);
+
+    return (int)++csvfile->lastLineRead;
 }
 
 unsigned int CountLines(char *path) {
     FILE* file = fopen(path, "r");
 
     if (file == NULL) {
+        fprintf(stderr, "unable to read csv file located at %s", path);
         return 0;
     }
 

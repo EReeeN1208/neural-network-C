@@ -190,22 +190,60 @@ void ScaleVectorInt(Vector *v, int s) {
     }
 }
 
-/* Start counting from 0*/
+/* Start counting from 0 */
 double GetMatrixValue(Matrix *m, unsigned int r, unsigned int c) {
     if (r >= m->r || c >= m->c) {
-        fprintf(stderr, "Error during matrix value access. Matrix size: %dx%d Tried to access: %dx%d", m->r, m->c, r, c);
+        fprintf(stderr, "Error during matrix value access. Matrix size: %dx%d, Tried to access: %dx%d", m->r, m->c, r, c);
         exit(-1);
     }
     return m->values[r*m->c + c];
 }
 
-/* Start counting from 0*/
+/* Start counting from 0 */
 void SetMatrixValue(Matrix *m, unsigned int r, unsigned int c, double value) {
     if (r >= m->r || c >= m->c) {
-        fprintf(stderr, "Error during matrix value set. Matrix size: %dx%d Tried to set: %dx%d", m->r, m->c, r, c);
+        fprintf(stderr, "Error during matrix value set w/ r-c. Matrix size: %dx%d, Tried to set: %dx%d", m->r, m->c, r, c);
         exit(-1);
     }
     m->values[r*m->c + c] = value;
+}
+
+void SetMatrixValuePos(Matrix *m, unsigned int pos, double value) {
+    if (pos >= m->c * m->c) {
+        fprintf(stderr, "Error during matrix value set w/ pos. Matrix size: %dx%d, Tried to set: %d", m->r, m->c, pos);
+        exit(-1);
+    }
+    m->values[pos] = value;
+}
+
+double GetVectorValue(Vector *v, unsigned int pos) {
+    if (pos>=v->size) {
+        fprintf(stderr, "Error during vector value access. Vector size: %d, Tried to access: %d", v->size, pos);
+        exit(-1);
+    }
+    return v->values[pos];
+}
+void SetVectorValue(Vector *v, unsigned int pos, double value) {
+    if (pos>=v->size) {
+        fprintf(stderr, "Error during vector value set. Vector size: %d, Tried to set: %d", v->size, pos);
+        exit(-1);
+    }
+    v->values[pos] = value;
+}
+
+/* Start counting from 0 */
+Vector* GetSubVector(Vector *v, unsigned int start, unsigned int size) {
+    if ((start + size)>v->size) {
+        fprintf(stderr, "Error during vector sub-vector access. Vector size: %d, Tried to access %d values starting from %d", v->size, size, start);
+        exit(-1);
+    }
+
+    Vector *nResult = NewEmptyVector(size);
+
+    for (int i = 0; i<size; i++) {
+        SetVectorValue(nResult, i, GetVectorValue(v, start + i));
+    }
+    return nResult;
 }
 
 /* debug function */

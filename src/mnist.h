@@ -7,12 +7,16 @@
 #include "linearalgebra.h"
 #include "csv.h"
 
+#define MNIST_DIGIT_SIDE_LEN 28
+#define MNIST_PIXEL_COUNT = MNIST_DIGIT_SIDE_LEN * MNIST_DIGIT_SIDE_LEN
+
 typedef struct {
     char digit;
-    Vector pixels;
+    Matrix* pixels;
 } MnistDigit;
 
-MnistDigit* ReadDigitFromCSV(CSVFile *csv);
-MnistDigit* CreateMnistDigit(char digit, Vector pixels);
+int ReadDigitFromCSV(CSVFile *csv, MnistDigit *d);
+MnistDigit* NewMnistDigit();
+void FreeMnistDigit(MnistDigit *d);
 
 #endif //MNIST_H

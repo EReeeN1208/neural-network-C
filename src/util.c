@@ -1,0 +1,46 @@
+//
+// Created by Eren Kural on 11.08.2025.
+//
+
+#include "util.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int StrToInt(char *s, unsigned int maxLen) {
+
+    int i = 0;
+    int out = 0;
+
+    if (s[0] == '-') {
+        i++;
+    }
+
+    while (i<maxLen && s[i] != '\0') {
+        if ('0' > s[i] || s[i] > '9') {
+            fprintf(stderr, "Error during str to int parsing. attempted to parse non-digit character %c\n", s[i]);
+            exit(-1);
+        }
+        out*=10;
+        out += (s[i++] - '0');
+    }
+
+    if (s[0] == '-') {
+        out *= -1;
+    }
+
+    return out;
+}
+
+unsigned char StrToUChar(char *s, unsigned int maxLen) {
+
+    int i = 0;
+    unsigned char out = 0;
+
+    while (i<maxLen && s[i] != '\0') {
+        out*=10;
+        out += (s[i++] - '0');
+    }
+
+    return out;
+}

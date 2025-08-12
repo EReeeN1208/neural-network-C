@@ -5,7 +5,12 @@
 #ifndef TESTS_H
 #define TESTS_H
 
-int TestLinearAlgebra(void);
+
+int RunAllTests(void);
+
+int TestUtil(void);
+int TestMnist(void);
 int TestCSV(void);
+int TestLinearAlgebra(void);
 
 #endif //TESTS_H

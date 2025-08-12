@@ -5,7 +5,8 @@
 #include "tests.h"
 
 int main(void) {
-    //TestLinearAlgebra();
 
-    TestCSV();
+    //printf("%lu, %lu, %lu", sizeof(double), sizeof(int), sizeof(long));
+
+    TestMnist();
 }

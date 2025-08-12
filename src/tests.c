@@ -1,25 +1,99 @@
+#include "tests.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "csv.h"
 #include "linearalgebra.h"
+#include "mnist.h"
+#include "util.h"
 
-const int MAX_BUFF = 5000;
+//const int MAX_BUFF = 5000;
 
-int TestCSV(void) {
+int RunAllTests(void) {
+    return TestUtil() + TestMnist() + TestCSV() + TestLinearAlgebra();
+}
+
+int TestUtil(void) {
+    unsigned int maxLen = 20;
+
+    char buff[maxLen];
+
+    strcpy(buff, "127");
+    printf("%s, %d\n", buff, StrToInt(buff, maxLen));
+
+    strcpy(buff, "-2372");
+    printf("%s, %d\n", buff, StrToInt(buff, maxLen));
+
+    strcpy(buff, "01270");
+    printf("%s, %d\n", buff, StrToInt(buff, maxLen));
 
 
-    CSVFile *csv = OpenCSVFile("..\\data\\mnist_test.csv");
+    strcpy(buff, "127");
+    printf("%s, %d\n", buff, StrToUChar(buff, maxLen));
+
+    strcpy(buff, "-2372");
+    printf("%s, %d\n", buff, StrToUChar(buff, maxLen));
+
+    strcpy(buff, "0261");
+    printf("%s, %d\n", buff, StrToUChar(buff, maxLen));
+
+    strcpy(buff, "0255");
+    printf("%s, %d\n", buff, StrToUChar(buff, maxLen));
+
+    return 0;
+}
+
+int TestMnist(void) {
+
+    CSVFile *csv;
+
+    // Windows
+    // csv = OpenCSVFile("..\\data\\mnist_test.csv");
+
+    // Unix
+    csv = OpenCSVFile("../data/mnist_test.csv");
 
     CSVInfo(csv);
 
     int count = 0;
-    char buffer[MAX_BUFF];
+    char buffer[CSV_LINE_MAX_BUFF];
 
-    while (GetNextLine(csv, buffer, MAX_BUFF) != -1) {
-        printf("Loop ran %d times\n", ++count);
+    SkipLine(csv);
+
+    MnistDigit *d = NewMnistDigit();
+
+    ReadDigitFromCSV(csv, d);
+
+    printf("%d\n", d->digit);
+
+    PrintMatrix(d->pixels);
+
+    return 0;
+}
+
+int TestCSV(void) {
+
+    CSVFile *csv;
+
+    // Windows
+    // csv = OpenCSVFile("..\\data\\mnist_test.csv");
+
+    // Unix
+    csv = OpenCSVFile("../data/mnist_test.csv");
+
+    CSVInfo(csv);
+
+    int count = 0;
+    char buffer[CSV_LINE_MAX_BUFF];
+
+
+    while (GetNextLine(csv, buffer) != -1) {
+        ++count;
+        printf("Loop ran %d times\n", count);
+        //printf("line %d: %s\n", count, buffer);
     }
-
     FreeCSV(csv);
 
     return 0;
@@ -38,10 +112,16 @@ int TestLinearAlgebra(void) {
     Matrix *m4 = NewIncrementalMatrix(2, 4);
     Vector *v1 = NewFilledVector(4, 3);
     Vector *v2 = VectorMatrixMultiply(m4, v1);
+    Vector *v3 = NewIncrementalVector(37);
+    Vector *v4 = GetSubVector(v3, 1, 37);
+    Vector *v5 = GetSubVector(v3, 5, 10);
 
     PrintMatrix(m4);
     PrintVector(v1);
     PrintVector(v2);
+    PrintVector(v3);
+    PrintVector(v4);
+    PrintVector(v5);
 
     Matrix *m5 = GetIdentityMatrix(6);
     Matrix *m6 = NewIncrementalMatrix(6, 6);
@@ -58,6 +138,8 @@ int TestLinearAlgebra(void) {
     ScaleMatrixDouble(m8, 2.5);
 
     PrintMatrix(m8);
+
+
 
     return 0;
 }

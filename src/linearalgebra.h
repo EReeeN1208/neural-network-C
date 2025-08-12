@@ -6,6 +6,24 @@
 #ifndef LINEARALGEBRA_H
 #define LINEARALGEBRA_H
 
+/*
+typedef union {
+    double dVal; // 0
+    long lVal; // 1
+} Value;
+
+typedef struct {
+    Value* values;
+    char vType;
+    unsigned int size;
+} Vector;
+
+typedef struct {
+    Value* values;
+    char vType;
+    unsigned int r, c;
+} Matrix;
+*/
 
 typedef struct {
     double* values;
@@ -43,6 +61,11 @@ void ScaleVectorInt(Vector *v, int s);
 
 double GetMatrixValue(Matrix *m, unsigned int r, unsigned int c);
 void SetMatrixValue(Matrix *m, unsigned int r, unsigned int c, double value);
+void SetMatrixValuePos(Matrix *m, unsigned int pos, double value);
+
+double GetVectorValue(Vector *v, unsigned int pos);
+void SetVectorValue(Vector *v, unsigned int pos, double value);
+Vector* GetSubVector(Vector *v, unsigned int start, unsigned int size);
 
 void PrintMatrix(Matrix *m);
 void PrintVector(Vector *v);
