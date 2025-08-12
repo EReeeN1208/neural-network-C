@@ -70,7 +70,7 @@ int TestMnist(void) {
     SkipLine(csv);
 
     MnistDigit *d = NewMnistDigit();
-
+    /*
     ReadDigitFromCSV(csv, d);
 
     printf("%d\n", d->digit);
@@ -78,6 +78,11 @@ int TestMnist(void) {
     PrintMatrix(d->pixels);
 
     PrintMnistDigit(d);
+    */
+    for (int i = 0; i<5; i++) {
+        ReadDigitFromCSV(csv, d);
+        PrintMnistDigit(d);
+    }
 
     return 0;
 }

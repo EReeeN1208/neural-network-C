@@ -5,8 +5,9 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#define SHADER_PALETTE " .-*=#"
-#define SHADER_PALETTE_SIZE 6
+//https://paulbourke.net/dataformats/asciiart/#:~:text=%22-,.%3A%2D%3D%2B*%23%25%40,-%22
+#define SHADER_PALETTE " .:-=+*#%@"
+#define SHADER_PALETTE_SIZE 10
 
 int StrToInt(char *s, unsigned int maxLen);
 unsigned char StrToUChar(char *s, unsigned int maxLen);
