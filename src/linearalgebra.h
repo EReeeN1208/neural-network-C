@@ -59,15 +59,24 @@ void ScaleVectorDouble(Vector *v, double s);
 void ScaleMatrixInt(Matrix *m, int s);
 void ScaleVectorInt(Vector *v, int s);
 
-double GetMatrixValue(Matrix *m, unsigned int r, unsigned int c);
-void SetMatrixValue(Matrix *m, unsigned int r, unsigned int c, double value);
+double GetMatrixValueRowCol(Matrix *m, unsigned int r, unsigned int c);
+double GetMatrixValuePos(Matrix *m, unsigned int pos);
+void SetMatrixValueRowCol(Matrix *m, unsigned int r, unsigned int c, double value);
 void SetMatrixValuePos(Matrix *m, unsigned int pos, double value);
 
 double GetVectorValue(Vector *v, unsigned int pos);
 void SetVectorValue(Vector *v, unsigned int pos, double value);
 Vector* GetSubVector(Vector *v, unsigned int start, unsigned int size);
 
+Matrix* ConvolveMatrix(Matrix *image, Matrix *kernel);
+Vector* FlattenMatrix(Matrix *m); // NOTE: Will free previous matrix and assign the pointer to its values to the vectors values
+
+Matrix* GetIdentityKernel(unsigned int size);
+Matrix* GetEdgeDetectionKernel(); //3x3
+Matrix* GetBlurKernel(unsigned int size);
+
 void PrintMatrix(Matrix *m);
+void ShadeMatrix(Matrix *m);
 void PrintVector(Vector *v);
 
 #endif //LINEARALGEBRA_H

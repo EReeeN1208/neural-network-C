@@ -8,6 +8,7 @@
 
 int RunAllTests(void);
 
+int TestConvolution(void);
 int TestUtil(void);
 int TestMnist(void);
 int TestCSV(void);

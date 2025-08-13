@@ -12,7 +12,59 @@
 //const int MAX_BUFF = 5000;
 
 int RunAllTests(void) {
-    return TestUtil() + TestMnist() + TestCSV() + TestLinearAlgebra();
+    return TestConvolution() + TestUtil() + TestMnist() + TestCSV() + TestLinearAlgebra();
+}
+
+int TestConvolution(void) {
+    CSVFile *csv;
+
+    // Windows
+    // csv = OpenCSVFile("..\\data\\mnist_test.csv");
+
+    // Unix
+    csv = OpenCSVFile("../data/mnist_test.csv");
+
+    CSVInfo(csv);
+
+    int count = 0;
+    char buffer[CSV_LINE_MAX_BUFF];
+
+    SkipLine(csv);
+
+    MnistDigit *d = NewMnistDigit();
+    ReadDigitFromCSV(csv, d);
+
+    Matrix *identityKernel = GetIdentityKernel(3);
+    Matrix *edgeDetectionKernel = GetEdgeDetectionKernel();
+    Matrix *blurKernel = GetBlurKernel(5);
+
+    PrintMatrix(identityKernel);
+    PrintMatrix(edgeDetectionKernel);
+    PrintMatrix(blurKernel);
+
+    Matrix *dIdentity = ConvolveMatrix(d->pixels, identityKernel);
+    Matrix *dEdgeDetection = ConvolveMatrix(d->pixels, edgeDetectionKernel);
+    Matrix *dBlur = ConvolveMatrix(d->pixels, blurKernel);
+
+    PrintMnistDigit(d);
+    ShadeMatrix(d->pixels);
+    ShadeMatrix(dIdentity);
+    ShadeMatrix(dEdgeDetection);
+    ShadeMatrix(dBlur);
+
+    FreeMnistDigit(d);
+    FreeCSV(csv);
+
+    FreeMatrix(identityKernel);
+    FreeMatrix(edgeDetectionKernel);
+    FreeMatrix(blurKernel);
+
+    FreeMatrix(dIdentity);
+    FreeMatrix(dEdgeDetection);
+    FreeMatrix(dBlur);
+
+
+    return 0;
 }
 
 int TestUtil(void) {
@@ -84,6 +136,9 @@ int TestMnist(void) {
         PrintMnistDigit(d);
     }
 
+    FreeMnistDigit(d);
+    FreeCSV(csv);
+
     return 0;
 }
 
@@ -108,6 +163,7 @@ int TestCSV(void) {
         printf("Loop ran %d times\n", count);
         //printf("line %d: %s\n", count, buffer);
     }
+
     FreeCSV(csv);
 
     return 0;
