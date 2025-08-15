@@ -1,10 +1,15 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "linearalgebra.h"
 #include "activationFunctions.h"
+#include "nn.h"
 #include "tests.h"
 
 int main(void) {
+
+    srand(time(NULL));
 
     //printf("%lu, %lu, %lu", sizeof(double), sizeof(int), sizeof(long));
 
@@ -18,6 +23,11 @@ int main(void) {
     }
     */
 
+    //printf("%f, %f, %f\n", (rand()%1000 / (double)1000)*2-1, (rand()%1000 / (double)1000)*2-1, (rand()%1000 / (double)1000)*2-1);
+
+    //TestLinearAlgebra();
+
     //TestMnist();
-    TestConvolution();
+    //TestConvolution();
+    NeuralNetworkMain();
 }

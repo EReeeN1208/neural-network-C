@@ -7,7 +7,6 @@
 
 #include <stdio.h>
 
-#include "linearalgebra.h"
 
 #define CSV_LINE_MAX_BUFF 5000
 #define CSV_VALUE_MAX_BUFF 10

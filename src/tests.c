@@ -180,18 +180,18 @@ int TestLinearAlgebra(void) {
 
 
     Matrix *m4 = NewIncrementalMatrix(2, 4);
-    Vector *v1 = NewFilledVector(4, 3);
+    Vector *v1 = NewFilledVector(4, -3);
     Vector *v2 = VectorMatrixMultiply(m4, v1);
     Vector *v3 = NewIncrementalVector(37);
-    Vector *v4 = GetSubVector(v3, 1, 37);
+    Vector *v4 = GetSubVector(v3, 1, 36);
     Vector *v5 = GetSubVector(v3, 5, 10);
 
     PrintMatrix(m4);
-    PrintVector(v1);
-    PrintVector(v2);
-    PrintVector(v3);
-    PrintVector(v4);
-    PrintVector(v5);
+    PrintVectorVertical(v1);
+    PrintVectorVertical(v2);
+    PrintVectorVertical(v3);
+    PrintVectorVertical(v4);
+    PrintVectorVertical(v5);
 
     Matrix *m5 = GetIdentityMatrix(6);
     Matrix *m6 = NewIncrementalMatrix(6, 6);
@@ -209,6 +209,8 @@ int TestLinearAlgebra(void) {
 
     PrintMatrix(m8);
 
+    Matrix *m9 = NewRandomisedMatrix(10, 10);
+    PrintMatrix(m9);
 
 
     return 0;

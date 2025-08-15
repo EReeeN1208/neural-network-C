@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <tgmath.h>
 
 int StrToInt(char *s, unsigned int maxLen) {
 
@@ -19,7 +20,7 @@ int StrToInt(char *s, unsigned int maxLen) {
     while (i<maxLen && s[i] != '\0') {
         if ('0' > s[i] || s[i] > '9') {
             fprintf(stderr, "Error during str to int parsing. attempted to parse non-digit character %c\n", s[i]);
-            exit(-1);
+            exit(EXIT_FAILURE_CODE);
         }
         out*=10;
         out += (s[i++] - '0');
@@ -47,4 +48,8 @@ unsigned char StrToUChar(char *s, unsigned int maxLen) {
 
 char CharShader(unsigned char c) {
     return SHADER_PALETTE[(c*SHADER_PALETTE_SIZE-1) / 255];
+}
+
+double GetRandomNormalised() {
+    return pow((rand()%RAND_PRECISION / (double)RAND_PRECISION)*2-1, 3);
 }

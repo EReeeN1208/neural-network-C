@@ -9,9 +9,16 @@
 #define SHADER_PALETTE " .:-=+*#%@"
 #define SHADER_PALETTE_SIZE 10
 
+#define RAND_PRECISION 1000
+
+#define EXIT_FAILURE_CODE 1
+
+
 int StrToInt(char *s, unsigned int maxLen);
 unsigned char StrToUChar(char *s, unsigned int maxLen);
 
 char CharShader(unsigned char c);
+
+double GetRandomNormalised();
 
 #endif //UTIL_H

@@ -21,7 +21,7 @@ int ReadDigitFromCSV(CSVFile *csv, MnistDigit *d) {
         return -1;
     }
 
-    Vector *vLine = NewEmptyVector(1 + MNIST_DIGIT_SIDE_LEN * MNIST_DIGIT_SIDE_LEN);
+    Vector *vLine = NewEmptyVector(1 + MNIST_PIXEL_COUNT);
 
     unsigned int lineLen = strlen(lineBuffer);
     unsigned int i = 0; // lineBuffer iterator;
@@ -40,7 +40,7 @@ int ReadDigitFromCSV(CSVFile *csv, MnistDigit *d) {
 
     d->digit = (char)GetVectorValue(vLine, 0);
 
-    for (int px = 0; px<MNIST_DIGIT_SIDE_LEN*MNIST_DIGIT_SIDE_LEN; px++) {
+    for (int px = 0; px<MNIST_PIXEL_COUNT; px++) {
         SetMatrixValuePos(d->pixels, px, GetVectorValue(vLine, px+1));
     }
 

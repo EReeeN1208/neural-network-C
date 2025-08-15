@@ -15,4 +15,6 @@ add_executable(c_neural_net src/main.c
         src/mnist.c
         src/mnist.h
         src/util.c
-        src/util.h)
+        src/util.h
+        src/nn.c
+        src/nn.h)

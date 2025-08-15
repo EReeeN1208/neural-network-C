@@ -5,9 +5,7 @@
 #include "csv.h"
 
 #include <stdlib.h>
-#include <string.h>
 
-#include "linearalgebra.h"
 
 CSVFile* OpenCSVFile(char *path) {
     FILE* file = fopen(path, "r");

@@ -8,7 +8,7 @@
 #include "csv.h"
 
 #define MNIST_DIGIT_SIDE_LEN 28
-#define MNIST_PIXEL_COUNT = MNIST_DIGIT_SIDE_LEN * MNIST_DIGIT_SIDE_LEN
+#define MNIST_PIXEL_COUNT (MNIST_DIGIT_SIDE_LEN * MNIST_DIGIT_SIDE_LEN)
 
 typedef struct {
     char digit;
