@@ -149,10 +149,7 @@ void AddHiddenLayer(NeuralNetwork *nNet, Layer *layer);
 void SetInputLayer(NeuralNetwork *nNet, Layer *layer);
 void SetOutputLayer(NeuralNetwork *nNet, Layer *layer);
 
-void FinalizeNeuralNetworkLayers(NeuralNetwork *nNet); //Call after adding layers
-
-void InitNetworkWeights(NeuralNetwork *nNet);
-
+void FinalizeNeuralNetworkLayers(NeuralNetwork *nNet); //Call after adding all layers
 
 
 int NeuralNetworkMain();

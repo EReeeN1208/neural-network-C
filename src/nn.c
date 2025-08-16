@@ -474,16 +474,13 @@ void FinalizeNeuralNetworkLayers(NeuralNetwork *nNet) {
 
     for (int i = 1; i<nNet->hiddenLayerCount; i++) {
         InitHiddenLayerTensor(nNet->hiddenLayers[i-1], nNet->hiddenLayers[i]);
+        if (nNet->hiddenLayers[i]->uType == LINEAR_LAYER) {
+            nNet->hiddenLayers[i]->linearLayer->weights = NewRandomisedMatrix(nNet->hiddenLayers[i]->computedValues->size, nNet->hiddenLayers[i-1]->computedValues->size);
+        }
     }
 
     InitIOLayerTensor(nNet->outputLayer);
-
-    InitNetworkWeights(nNet);
 } //Call after adding layers
-
-void InitNetworkWeights(NeuralNetwork *nNet) {
-    // TO-DO
-}
 
 int NeuralNetworkMain() {
 

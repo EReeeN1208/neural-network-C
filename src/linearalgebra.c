@@ -36,6 +36,16 @@ Vector* NewIncrementalVector(unsigned int size) {
     return v;
 }
 
+Vector* NewRandomisedVector(unsigned int size) {
+    Vector *v = NewEmptyVector(size);
+
+    for (int i = 0; i < size; i++) {
+        v->values[i] = GetRandomNormalised();
+    }
+    return v;
+}
+
+
 void FreeVector(Vector *v) {
     free(v->values);
     free(v);

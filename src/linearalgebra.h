@@ -57,6 +57,7 @@ typedef struct {
 Vector* NewEmptyVector(unsigned int size);
 Vector* NewFilledVector(unsigned int size, double fill);
 Vector* NewIncrementalVector(unsigned int size);
+Vector* NewRandomisedVector(unsigned int size);
 void FreeVector(Vector *v);
 
 Matrix* NewEmptyMatrix(unsigned int r, unsigned int c);
