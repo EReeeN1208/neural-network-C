@@ -503,7 +503,7 @@ Tensor* NewTensorMatrix(Matrix* m) {
     Tensor *t = malloc(sizeof(Tensor));
     t->uType = MATRIX2D;
     t->matrix2d = m;
-    t->size = m->r * m->r;
+    t->size = m->r * m->c;
 
     return t;
 }

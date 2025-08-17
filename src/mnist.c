@@ -64,7 +64,9 @@ double CalculateMnistLoss(Tensor* probabilities, char digit) {
 }
 
 void FreeMnistDigit(MnistDigit *d) {
-    FreeMatrix(d->pixels);
+    if (d->pixels != NULL) {
+        FreeMatrix(d->pixels);
+    }
     free(d);
 }
 

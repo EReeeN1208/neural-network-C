@@ -11,6 +11,8 @@
 #include <string.h>
 
 #include "activationFunctions.h"
+#include "csv.h"
+#include "mnist.h"
 #include "util.h"
 
 
@@ -247,6 +249,7 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
             break;
         }
         case CONVOLUTION_LAYER: {
+
             if (previousLayer->computedValues->uType == VECTOR) {
                 goto error;
             }
@@ -321,7 +324,7 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
         }
 
         default: {
-            fprintf(stderr, "Error: tried to access utype '%d' for a tensor in InitHiddenLayerTensor().", layer->uType);
+            fprintf(stderr, "Error: tried to access utype '%d' for a layer in InitHiddenLayerTensor().", layer->uType);
             exit(EXIT_FAILURE_CODE);
         }
     }
@@ -535,8 +538,10 @@ void AddHiddenLayer(NeuralNetwork *nNet, Layer *layer) {
     nNet->stage = 1;
 
     nNet->hiddenLayerCount++;
-    realloc(nNet->hiddenLayers, sizeof(Layer) * nNet->hiddenLayerCount);
-    nNet->hiddenLayers[nNet->hiddenLayerCount - 1] = layer;
+    Layer** temp = malloc(sizeof(Layer**) * nNet->hiddenLayerCount);
+    memcpy(temp, nNet->hiddenLayers, sizeof(Layer**) * (nNet->hiddenLayerCount-1));
+    nNet->hiddenLayers = temp;
+    nNet->hiddenLayers[nNet->hiddenLayerCount-1] = layer;
 }
 
 void SetInputLayer(NeuralNetwork *nNet, Layer *layer) {
@@ -603,12 +608,58 @@ Tensor* RunNeuralNetwork(NeuralNetwork *nNet, Tensor *input) {
 int NeuralNetworkMain() {
 
     NeuralNetwork *nNet = NewNeuralNetwork(6, 0.05);
+
     SetInputLayer(nNet, NewMatrixLayer(28, 28));
+    AddHiddenLayer(nNet, NewConvolutionLayer(8, 3));
+    AddHiddenLayer(nNet, NewPoolingLayer(2, MAX_POOLING));
+    AddHiddenLayer(nNet, NewFlatteningLayer());
+    AddHiddenLayer(nNet, NewLinearLayer(500));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu));
+    AddHiddenLayer(nNet, NewLinearLayer(100));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu));
+    AddHiddenLayer(nNet, NewLinearLayer(10));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu));
+    AddHiddenLayer(nNet, NewSoftMaxLayer());
     SetOutputLayer(nNet, NewVectorLayer(10));
+
+    FinalizeNeuralNetworkLayers(nNet);
+
+    // CSV-MNIST
+
+    CSVFile *csv;
+
+    // Windows
+    csv = OpenCSVFile("..\\data\\mnist_test.csv");
+
+    // Unix
+    // csv = OpenCSVFile("../data/mnist_test.csv");
+
+    CSVInfo(csv);
+
+    int count = 0;
+    char buffer[CSV_LINE_MAX_BUFF];
+
+    SkipLine(csv);
+
+    MnistDigit *mnistDigit = NewMnistDigit();
+
+    for (int i = 0; i<1; i++) {
+        ReadDigitFromCSV(csv, mnistDigit);
+        PrintMnistDigit(mnistDigit);
+        Tensor* inputTensor = NewTensorMatrix(mnistDigit->pixels);
+        Tensor *netOutput = RunNeuralNetwork(nNet, inputTensor);
+        FreeTensor(inputTensor);
+
+
+
+        PrintVectorHorizontal(netOutput->vector);
+    }
 
 
     //Cleanup
     FreeNeuralNetwork(nNet);
+    free(mnistDigit);
+    FreeCSV(csv);
 
     return 0;
 }
