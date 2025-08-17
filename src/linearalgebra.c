@@ -162,6 +162,33 @@ void FreeMatrix3d(Matrix3d *m) {
 
 
 
+Matrix* Get2dSliceMatrix3d(Matrix3d *m3d, unsigned int slice) {
+    if (slice >= m3d->depth) {
+        fprintf(stderr, "Attempted to access slice out of bounds. GetSliceMatrix3d()");
+        exit(EXIT_FAILURE_CODE);
+    }
+
+    unsigned int sliceSize = m3d->r * m3d->c;
+
+    Matrix *m = NewEmptyMatrix(m3d->r, m3d->c);
+    memcpy(m->values, m3d->values+sliceSize*slice, sizeof(double) * sliceSize);
+
+    return m;
+}
+
+void Set2dSliceMatrix3d(Matrix3d *mDst, Matrix *mSrc, unsigned int slice) {
+    if (slice >= mDst->depth) {
+        fprintf(stderr, "Attempted to access slice out of bounds. GetSliceMatrix3d()");
+        exit(EXIT_FAILURE_CODE);
+    }
+
+    unsigned int sliceSize = mDst->r * mDst->c;
+
+    memcpy(mDst->values+sliceSize*slice, mSrc->values, sizeof(double) * sliceSize);
+}
+
+
+
 Matrix* MatrixMultiply(Matrix *m1, Matrix *m2) {
     if (m1->c != m2->r) {
         fprintf(stderr, "Error during matrix matrix multiplication. Sizes: %dx%d and %dx%d", m1->r, m1->c, m2->r, m2->c);
@@ -195,7 +222,7 @@ Vector* VectorMatrixMultiply(Matrix *m, Vector *v) {
     Vector *vResult = NewEmptyVector(m->r);
 
     double sum;
-    for (int i = 0; i < vResult->size; i++) {
+    for (int i = 0; i < m->r; i++) {
         sum = 0;
         for (int j = 0; j < m->c; j++) {
             sum += GetMatrixValueRowCol(m, i, j)*v->values[j];
@@ -205,9 +232,10 @@ Vector* VectorMatrixMultiply(Matrix *m, Vector *v) {
     return vResult;
 }
 
-Matrix* MatrixAdd(Matrix *m1, Matrix *m2) {
+Matrix* NewMatrixSum(Matrix *m1, Matrix *m2) {
     if (m1->r != m2->r || m1->c != m2->c) {
-        fprintf(stderr, "Matrices not same size for addition");
+        fprintf(stderr, "Matrices not same size for addition. NewMatrixSum()");
+        exit(EXIT_FAILURE_CODE);
     }
     int size = m1->r * m1->c;
 
@@ -219,9 +247,10 @@ Matrix* MatrixAdd(Matrix *m1, Matrix *m2) {
     return mResult;
 }
 
-Vector* VectorAdd(Vector *v1, Vector *v2) {
+Vector* NewVectorSum(Vector *v1, Vector *v2) {
     if (v1->size != v2->size) {
-        fprintf(stderr, "Vectors not same size for addition");
+        fprintf(stderr, "Vectors not same size for addition. NewVectorSum()");
+        exit(EXIT_FAILURE_CODE);
     }
 
     Vector *vResult = NewEmptyVector(v1->size);
@@ -231,6 +260,19 @@ Vector* VectorAdd(Vector *v1, Vector *v2) {
     }
     return vResult;
 }
+
+void AddVector(Vector *vDest/*changes*/, Vector *vToAdd/*remains unchanged*/) {
+    if (vDest->size != vToAdd->size) {
+        fprintf(stderr, "Vectors not same size for addition. AddVector()");
+        exit(EXIT_FAILURE_CODE);
+    }
+
+    for (int i = 0; i < vDest->size; i++) {
+        vDest->values[i] += vToAdd->values[i];
+    }
+
+}
+
 Matrix* TransposeMatrix(Matrix *m) {
     unsigned int size = m->r * m->c;
 
@@ -352,7 +394,7 @@ void SetMatrixValuePos(Matrix *m, unsigned int pos, double value) {
 
 
 
-double GetMatrix3DValueRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c) {
+double GetMatrix3DValueDepthRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c) {
     if (depth >= m3d->depth || r >= m3d->r || c >= m3d->c) {
         fprintf(stderr, "Error during matrix3d value get w/ d-r-c. Matrix size: %dx%dx%d, Tried to get: %dx%dx%d", m3d->depth, m3d->r, m3d->c, depth, r, c);
         exit(EXIT_FAILURE_CODE);
@@ -368,7 +410,7 @@ double GetMatrix3DValuePos(Matrix3d *m3d, unsigned int pos) {
     return m3d->values[pos];
 }
 
-void SetMatrix3DValueRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c, double value) {
+void SetMatrix3DValueDepthRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c, double value) {
     if (depth >= m3d->depth || r >= m3d->r || c >= m3d->c) {
         fprintf(stderr, "Error during matrix3d value set w/ d-r-c. Matrix size: %dx%dx%d, Tried to set: %dx%dx%d", m3d->depth, m3d->r, m3d->c, depth, r, c);
         exit(EXIT_FAILURE_CODE);
@@ -500,6 +542,15 @@ Tensor* CloneTensorEmpty(Tensor *t) {
     return tNew; // does not leak even tough static analysis says it does
 }
 
+void CopyTensorValues(Tensor *tDst, Tensor *tSrc, _Bool checkTensorType) {
+    if (tDst->size != tSrc->size || ((tDst->uType != tSrc->uType) && checkTensorType)) {
+        fprintf(stderr, "Error: The input and output tensor's are not compatible. CopyTensorValues()");
+        exit(EXIT_FAILURE_CODE);
+    }
+
+    memcpy(GetTensorValues(tDst), GetTensorValues(tSrc), sizeof(double) * tSrc->size);
+}
+
 double* GetTensorValues(Tensor *t) {
     switch (t->uType) {
         case VECTOR: {
@@ -514,7 +565,7 @@ double* GetTensorValues(Tensor *t) {
         default: {
             fprintf(stderr, "Error: tried to access utype '%d' for a tensor GetTensorValues().", t->uType);
             exit(EXIT_FAILURE_CODE);
-        };
+        }
     }
 }
 
@@ -524,6 +575,21 @@ double GetTensorValuePos(Tensor *t, unsigned int pos) {
         exit(EXIT_FAILURE_CODE);
     }
     return GetTensorValues(t)[pos];
+}
+
+unsigned int GetTensorMaxIndex(Tensor *t) {
+    const double *tensorValues = GetTensorValues(t);
+
+    unsigned int index = 0;
+    double max = tensorValues[0];
+
+    for (unsigned int i = 1; i<t->size; i++) {
+        if (tensorValues[i]>max) {
+            max = tensorValues[i];
+            index = i;
+        }
+    }
+    return index;
 }
 
 void FreeTensor(Tensor *t) {
@@ -548,6 +614,77 @@ void FreeTensor(Tensor *t) {
     free(t);
 }
 
+void AveragePoolMatrix(Matrix *mDst, Matrix *mSrc, unsigned int poolSize) {
+
+    double* values = mDst->values;
+
+    for (unsigned int r = 0; r<mSrc->r; r+= poolSize) {
+        for (unsigned int c = 0; c<mSrc->r; c+= poolSize) {
+            double max = GetMatrixValueRowCol(mSrc, r, c);
+            for (int i = 0; i<poolSize*poolSize; i++) {
+                if (GetMatrixValueRowCol(mSrc, r+(i/poolSize), c+(i%poolSize)) > max) {
+                    max = GetMatrixValueRowCol(mSrc, r+(i/poolSize), c+(i%poolSize));
+                }
+            }
+            *values = max;
+            values++;
+        }
+    }
+}
+
+void MaxPoolMatrix(Matrix *mDst, Matrix *mSrc, unsigned int poolSize) {
+
+    double* values = mDst->values;
+
+    for (unsigned int r = 0; r<mSrc->r; r+= poolSize) {
+        for (unsigned int c = 0; c<mSrc->r; c+= poolSize) {
+            double sum = 0;
+            for (int i = 0; i<poolSize*poolSize; i++) {
+                sum += GetMatrixValueRowCol(mSrc, r+(i/poolSize), c+(i%poolSize));
+            }
+            *values = sum;
+            values++;
+        }
+    }
+}
+
+void AveragePoolMatrix3d(Matrix3d *mDst, Matrix3d *mSrc, unsigned int poolSize) {
+
+    double* values = mDst->values;
+
+    for (int d = 0; d<mSrc->depth; d++) {
+        for (unsigned int r = 0; r<mSrc->r; r+= poolSize) {
+            for (unsigned int c = 0; c<mSrc->r; c+= poolSize) {
+                double max = GetMatrix3DValueDepthRowCol(mSrc, d, r, c);
+                for (int i = 0; i<poolSize*poolSize; i++) {
+                    if (GetMatrix3DValueDepthRowCol(mSrc, d, r+(i/poolSize), c+(i%poolSize)) > max) {
+                        max = GetMatrix3DValueDepthRowCol(mSrc, d, r+(i/poolSize), c+(i%poolSize));
+                    }
+                }
+                *values = max;
+                values++;
+            }
+        }
+    }
+}
+
+void MaxPoolMatrix3d(Matrix3d *mDst, Matrix3d *mSrc, unsigned int poolSize) {
+
+    double* values = mDst->values;
+
+    for (int d = 0; d<mSrc->depth; d++) {
+        for (unsigned int r = 0; r<mSrc->r; r+= poolSize) {
+            for (unsigned int c = 0; c<mSrc->r; c+= poolSize) {
+                double sum = 0;
+                for (int i = 0; i<poolSize*poolSize; i++) {
+                    sum += GetMatrix3DValueDepthRowCol(mSrc, d, r+(i/poolSize), c+(i%poolSize));
+                }
+                *values = sum;
+                values++;
+            }
+        }
+    }
+}
 
 /* debug function */
 void PrintMatrix(Matrix *m) {

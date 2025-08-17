@@ -73,10 +73,14 @@ Matrix3d* NewRandomisedMatrix3d(unsigned int depth, unsigned int r, unsigned int
 unsigned int GetMatrix3dSize(Matrix3d *m3d);
 void FreeMatrix3d(Matrix3d *m);
 
+Matrix* Get2dSliceMatrix3d(Matrix3d *m3d, unsigned int slice);
+void Set2dSliceMatrix3d(Matrix3d *mDst, Matrix *mSrc, unsigned int slice);
+
 Matrix* MatrixMultiply(Matrix *m1, Matrix *m2);
 Vector* VectorMatrixMultiply(Matrix *m, Vector *v);
-Matrix* MatrixAdd(Matrix *m1, Matrix *m2);
-Vector* VectorAdd(Vector *v1, Vector *v2);
+Matrix* NewMatrixSum(Matrix *m1, Matrix *m2);
+Vector* NewVectorSum(Vector *v1, Vector *v2);
+void AddVector(Vector *vDest, Vector *vToAdd); // Adds vToAdd to vDest. vDest is modified. vToAdd is not
 Matrix* TransposeMatrix(Matrix *m);
 
 void ScaleVectorDouble(Vector *v, double s);
@@ -95,9 +99,9 @@ double GetMatrixValuePos(Matrix *m, unsigned int pos);
 void SetMatrixValueRowCol(Matrix *m, unsigned int r, unsigned int c, double value);
 void SetMatrixValuePos(Matrix *m, unsigned int pos, double value);
 
-double GetMatrix3DValueRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c);
+double GetMatrix3DValueDepthRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c);
 double GetMatrix3DValuePos(Matrix3d *m3d, unsigned int pos);
-void SetMatrix3DValueRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c, double value);
+void SetMatrix3DValueDepthRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c, double value);
 void SetMatrix3DValuePos(Matrix3d *m3d, unsigned int pos, double value);
 
 Matrix* ConvolveMatrix(Matrix *image, Matrix *kernel);
@@ -111,11 +115,17 @@ Tensor* NewTensorVector(Vector* v);
 Tensor* NewTensorMatrix(Matrix* m);
 Tensor* NewTensorMatrix3d(Matrix3d* m3d);
 Tensor* CloneTensorEmpty(Tensor *t);
+void CopyTensorValues(Tensor *tDst, Tensor *tSrc, _Bool checkTensorType); // Will check to make sure the sizes and types of tensors match
 
 double* GetTensorValues(Tensor *t);
 double GetTensorValuePos(Tensor *t, unsigned int pos);
+unsigned int GetTensorMaxIndex(Tensor *t); //return the index of the largest value inside a tensor's values
 void FreeTensor(Tensor *t);
 
+void AveragePoolMatrix(Matrix *mDst, Matrix *mSrc, unsigned int poolSize);
+void MaxPoolMatrix(Matrix *mDst, Matrix *mSrc, unsigned int poolSize);
+void AveragePoolMatrix3d(Matrix3d *mDst, Matrix3d *mSrc, unsigned int poolSize);
+void MaxPoolMatrix3d(Matrix3d *mDst, Matrix3d *mSrc, unsigned int poolSize);
 
 void PrintMatrix(Matrix *m);
 void ShadeMatrix(Matrix *m);

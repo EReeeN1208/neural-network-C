@@ -36,7 +36,7 @@
 //Note to self
 //Weights format:
 //First dimension (Rows) represents the node of the layer
-//The second dimension (Columns) represents the weight for each of the nodes in the previous layer
+//The second dimension (Columns) represents the value for each of the nodes in the previous layer
 
 typedef struct {
     unsigned int size;
@@ -150,6 +150,8 @@ void SetInputLayer(NeuralNetwork *nNet, Layer *layer);
 void SetOutputLayer(NeuralNetwork *nNet, Layer *layer);
 
 void FinalizeNeuralNetworkLayers(NeuralNetwork *nNet); //Call after adding all layers
+
+Tensor* RunNeuralNetwork(NeuralNetwork *nNet, Tensor *input); //Do not free the output tensor
 
 
 int NeuralNetworkMain();

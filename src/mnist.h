@@ -18,6 +18,8 @@ typedef struct {
 int ReadDigitFromCSV(CSVFile *csv, MnistDigit *d);
 MnistDigit* NewMnistDigit();
 
+double CalculateMnistLoss(Vector* probabilities, char digit);
+
 void FreeMnistDigit(MnistDigit *d);
 void PrintMnistDigit(MnistDigit *d);
 

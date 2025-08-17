@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <tgmath.h>
 
 #include "util.h"
 
@@ -52,6 +53,14 @@ MnistDigit* NewMnistDigit() {
     MnistDigit *d = malloc(sizeof(MnistDigit));
     d->pixels = NewEmptyMatrix(MNIST_DIGIT_SIDE_LEN, MNIST_DIGIT_SIDE_LEN);
     return d;
+}
+
+double CalculateMnistLoss(Tensor* probabilities, char digit) {
+    if (probabilities->size != 10) {
+        fprintf(stderr, "Error: tried to calculate MNIST loss for tensor with invalid size: %d", probabilities->size);
+        exit(EXIT_FAILURE_CODE);
+    }
+    return 1 - pow(GetTensorValuePos(probabilities, digit), 2);
 }
 
 void FreeMnistDigit(MnistDigit *d) {
