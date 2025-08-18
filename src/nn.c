@@ -207,11 +207,60 @@ void FreeLayer(Layer *layer) {
         }
 
         default: {
-            fprintf(stderr, "Error: tried to access utype '%d' for a tensor in FreeLayer().", layer->uType);
+            fprintf(stderr, "Error: tried to access utype '%d' for a layer in FreeLayer().", layer->uType);
             exit(EXIT_FAILURE_CODE);
         }
     }
 } //FreeLayer()
+
+void PrintLayerInfo(Layer *layer) {
+    char layerName[LAYER_WRITE_MAX_BUFF];
+    char tensorInfo[TENSOR_WRITE_MAX_BUFF];
+
+    switch (layer->uType) {
+        case LINEAR_LAYER: {
+            strcpy(layerName, "Linear Layer");
+            break;
+        }
+        case CONVOLUTION_LAYER: {
+            strcpy(layerName, "Convolution Layer");
+            break;
+        }
+
+        case VECTOR_LAYER: {
+            strcpy(layerName, "Vector Layer");
+            break;
+        }
+        case MATRIX_LAYER: {
+            strcpy(layerName, "Matrix Layer");
+            break;
+        }
+
+        case ELEMENTWISE_LAYER: {
+            strcpy(layerName, "Elementwise Layer");
+            break;
+        }
+        case POOLING_LAYER: {
+            strcpy(layerName, "Pooling Layer");
+            break;
+        }
+        case FLATTENING_LAYER: {
+            strcpy(layerName, "Flattening Layer");
+            break;
+        }
+        case SOFTMAX_LAYER: {
+            strcpy(layerName, "Softmax Layer");
+            break;
+        }
+        default: {
+            fprintf(stderr, "Error: tried to access utype '%d' for a layer in PrintLayerInfo().", layer->uType);
+            exit(EXIT_FAILURE_CODE);
+        }
+    }
+
+    WriteTensorInfo(layer->computedValues, tensorInfo);
+    printf("%-30s | %s\n", layerName, tensorInfo);
+}
 
 void InitIOLayerTensor(Layer *layer) {
     switch (layer->uType) {
@@ -494,7 +543,7 @@ void ComputeLayerValues(Layer *previousLayer, Layer *layer) {
         }
 
         default: {
-            fprintf(stderr, "Error: tried to access utype '%d' for a tensor in ComputeLayerValues().", layer->uType);
+            fprintf(stderr, "Error: tried to access utype '%d' for a layer in ComputeLayerValues().", layer->uType);
             exit(EXIT_FAILURE_CODE);
         }
     }
@@ -506,8 +555,12 @@ void ComputeLayerValues(Layer *previousLayer, Layer *layer) {
     }
 } // InitHiddenLayerTensor()
 
-NeuralNetwork* NewNeuralNetwork(unsigned int maxTrainingRounds, double learningRate) {
+NeuralNetwork* NewNeuralNetwork(unsigned int maxTrainingRounds, double learningRate, char *name) {
     NeuralNetwork *nNet = malloc(sizeof(NeuralNetwork));
+
+    nNet->name = malloc(sizeof(char) * (strlen(name)+1));
+
+    memcpy(nNet->name, name, strlen(name) + 1);
 
     nNet->stage = NET_EMPTY;
     nNet->hiddenLayerCount = 0;
@@ -520,6 +573,18 @@ NeuralNetwork* NewNeuralNetwork(unsigned int maxTrainingRounds, double learningR
 
     return nNet;
 }
+
+void PrintNeuralNetworkInfo(NeuralNetwork *nNet) {
+    printf("\nNeural Network '%s' info:\n", nNet->name);
+    printf("Stage: %d, Layer count: %d, Training Rounds: %d, Learning Rate: %f\n", nNet->stage, nNet->hiddenLayerCount+2, nNet->maxTrainingRounds, nNet->learningRate);
+    printf("Network Layers:\n");
+    PrintLayerInfo(nNet->inputLayer);
+    for (int i = 0; i<nNet->hiddenLayerCount; i++) {
+        PrintLayerInfo(nNet->hiddenLayers[i]);
+    }
+    PrintLayerInfo(nNet->outputLayer);
+}
+
 void FreeNeuralNetwork(NeuralNetwork *nNet) {
     FreeLayer(nNet->inputLayer);
     FreeLayer(nNet->outputLayer);
@@ -587,7 +652,7 @@ void FinalizeNeuralNetworkLayers(NeuralNetwork *nNet) {
 
 Tensor* RunNeuralNetwork(NeuralNetwork *nNet, Tensor *input) {
     if (nNet->stage < 3) {
-        fprintf(stderr, "Error: Attempted to run untrained neural network (stage %d). Required stage: >= 3", nNet->stage);
+        fprintf(stderr, "Warning: Attempted to run untrained neural network (stage %d). Required stage: >= 3", nNet->stage);
         //exit(EXIT_FAILURE_CODE);
     }
 
@@ -607,7 +672,7 @@ Tensor* RunNeuralNetwork(NeuralNetwork *nNet, Tensor *input) {
 
 int NeuralNetworkMain() {
 
-    NeuralNetwork *nNet = NewNeuralNetwork(6, 0.05);
+    NeuralNetwork *nNet = NewNeuralNetwork(6, 0.05, "MNIST Test");
 
     SetInputLayer(nNet, NewMatrixLayer(28, 28));
     AddHiddenLayer(nNet, NewConvolutionLayer(8, 3));
@@ -629,10 +694,10 @@ int NeuralNetworkMain() {
     CSVFile *csv;
 
     // Windows
-    csv = OpenCSVFile("..\\data\\mnist_test.csv");
+    // csv = OpenCSVFile("..\\data\\mnist_test.csv");
 
     // Unix
-    // csv = OpenCSVFile("../data/mnist_test.csv");
+    csv = OpenCSVFile("../data/mnist_test.csv");
 
     CSVInfo(csv);
 
@@ -655,6 +720,7 @@ int NeuralNetworkMain() {
         PrintVectorHorizontal(netOutput->vector);
     }
 
+    PrintNeuralNetworkInfo(nNet);
 
     //Cleanup
     FreeNeuralNetwork(nNet);

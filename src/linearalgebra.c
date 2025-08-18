@@ -740,3 +740,20 @@ void PrintVectorHorizontal(Vector *v) {
     }
     printf("]\n");
 }
+
+void WriteTensorInfo(Tensor *t, char *buffer) {
+    switch (t->uType) {
+        case VECTOR: {
+            sprintf(buffer, "Vector - Size: %d", t->vector->size);
+            break;
+        }
+        case MATRIX2D: {
+            sprintf(buffer, "2D Matrix - Size: %dx%d", t->matrix2d->r, t->matrix2d->c);
+            break;
+        }
+        case MATRIX3D: {
+            sprintf(buffer, "3D Matrix - Size: %dx%dx%d", t->matrix3d->depth, t->matrix3d->r, t->matrix3d->c);
+            break;
+        }
+    }
+}

@@ -33,6 +33,8 @@
 #define NET_LAYERS_FINALIZED 2
 #define NET_TRAINED 3
 
+#define LAYER_WRITE_MAX_BUFF 30
+
 //Note to self
 //Weights format:
 //First dimension (Rows) represents the node of the layer
@@ -99,6 +101,9 @@ typedef struct {
 
 
 typedef struct {
+
+    char* name;
+
     Layer* inputLayer;
     Layer** hiddenLayers;
     Layer* outputLayer;
@@ -137,12 +142,14 @@ Layer* NewSoftMaxLayer(void);
 void FreeSoftMaxLayer(Layer *layer);
 
 void FreeLayer(Layer *layer);
+void PrintLayerInfo(Layer *layer);
 
 void InitIOLayerTensor(Layer *layer);
 void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer);
 void ComputeLayerValues(Layer *previousLayer, Layer *layer);
 
-NeuralNetwork* NewNeuralNetwork(unsigned int maxTrainingRounds, double learningRate);
+NeuralNetwork* NewNeuralNetwork(unsigned int maxTrainingRounds, double learningRate, char *name);
+void PrintNeuralNetworkInfo(NeuralNetwork *nNet);
 void FreeNeuralNetwork(NeuralNetwork *nNet);
 
 void AddHiddenLayer(NeuralNetwork *nNet, Layer *layer);

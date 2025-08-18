@@ -10,6 +10,8 @@
 #define MATRIX2D 1
 #define MATRIX3D 2
 
+#define TENSOR_WRITE_MAX_BUFF 50
+
 /*
 typedef union {
     double dVal; // 0
@@ -131,6 +133,8 @@ void PrintMatrix(Matrix *m);
 void ShadeMatrix(Matrix *m);
 void PrintVectorVertical(Vector *v);
 void PrintVectorHorizontal(Vector *v);
+
+void WriteTensorInfo(Tensor *t, char *buffer);
 
 #endif //LINEARALGEBRA_H
 
