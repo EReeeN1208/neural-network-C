@@ -25,15 +25,20 @@ Layer* NewLinearLayer(unsigned int size) {
     layer->linearLayer = malloc(sizeof(LinearLayer));
     layer->linearLayer->size = size;
     layer->linearLayer->weights = NULL; // will be allocated during InitNeuralNetworkLayers()
+    layer->linearLayer->weightGradients = NULL; // will be allocated during InitNeuralNetworkLayers()
     layer->linearLayer->biases = NewFilledVector(size, 0);
+    layer->linearLayer->biasGradients = NewFilledVector(size, 0);
 
     layer->computedValues = NULL;
+    layer->computedValueGradients = NULL;
 
     return layer;
 }
 void FreeLinearLayer(Layer *layer) {
-    FreeVector(layer->linearLayer->biases);
     FreeMatrix(layer->linearLayer->weights);
+    FreeMatrix(layer->linearLayer->weightGradients);
+    FreeVector(layer->linearLayer->biases);
+    FreeVector(layer->linearLayer->biasGradients);
     free(layer->linearLayer);
     free(layer);
 }
@@ -45,17 +50,21 @@ Layer* NewConvolutionLayer(unsigned int kernelCount, unsigned int kernelSize) {
     layer->convolutionLayer->kernelCount = kernelCount;
     layer->convolutionLayer->kernelSize = kernelSize;
     layer->convolutionLayer->kernels = malloc(sizeof(Matrix*) * kernelCount);
+    layer->convolutionLayer->kernelGradients = malloc(sizeof(Matrix*) * kernelCount);
     for (int i = 0; i<kernelCount; i++) {
-        layer->convolutionLayer->kernels[i] = NewRandomisedMatrix(kernelSize, kernelSize);
+        layer->convolutionLayer->kernels[i] = NewHeRandomMatrix(kernelSize, kernelSize);
+        layer->convolutionLayer->kernelGradients[i] = NewFilledMatrix(kernelSize, kernelSize, 0);
     }
 
     layer->computedValues = NULL;
+    layer->computedValueGradients = NULL;
 
     return layer;
 }
 void FreeConvolutionLayer(Layer *layer) {
     for (int i = 0; i<layer->convolutionLayer->kernelCount; i++) {
         FreeMatrix(layer->convolutionLayer->kernels[i]);
+        FreeMatrix(layer->convolutionLayer->kernelGradients[i]);
     }
     free(layer->convolutionLayer);
     free(layer);
@@ -72,6 +81,7 @@ Layer* NewVectorLayer(unsigned int size) {
     layer->vectorLayer->size = size;
 
     layer->computedValues = NULL;
+    layer->computedValueGradients = NULL;
 
     return layer;
 }
@@ -88,6 +98,7 @@ Layer* NewMatrixLayer(unsigned int r, unsigned int c) {
     layer->matrixLayer->c = c;
 
     layer->computedValues = NULL;
+    layer->computedValueGradients = NULL;
 
     return layer;
 }
@@ -100,13 +111,15 @@ void FreeMatrixLayer(Layer *layer) {
 /*
  * Non-Trainable layers
  */
-Layer* NewElementWiseLayer(double (*function)(double)) {
+Layer* NewElementWiseLayer(double (*function)(double), double (*gradientFunction)(double)) {
     Layer *layer = malloc(sizeof(Layer));
     layer->uType = ELEMENTWISE_LAYER;
     layer->elementWiseLayer = malloc(sizeof(ElementWiseLayer));
     layer->elementWiseLayer->function = function;
+    layer->elementWiseLayer->gradientFunction = gradientFunction;
 
     layer->computedValues = NULL;
+    layer->computedValueGradients = NULL;
 
     return layer;
 }
@@ -123,6 +136,7 @@ Layer* NewPoolingLayer(unsigned int poolSize, unsigned int poolingMethod) {
     layer->poolingLayer->poolingMethod = poolingMethod;
 
     layer->computedValues = NULL;
+    layer->computedValueGradients = NULL;
 
     return layer;
 }
@@ -142,6 +156,7 @@ Layer* NewFlatteningLayer(void) {
     layer->flatteningLayer = malloc(sizeof(FlatteningLayer));
 
     layer->computedValues = NULL;
+    layer->computedValueGradients = NULL;
 
     return layer;
 }
@@ -156,6 +171,7 @@ Layer* NewSoftMaxLayer(void) {
     layer->softMaxLayer = malloc(sizeof(SoftMaxLayer));
 
     layer->computedValues = NULL;
+    layer->computedValueGradients = NULL;
 
     return layer;
 }
@@ -166,8 +182,15 @@ void FreeSoftMaxLayer(Layer *layer) {
 
 
 void FreeLayer(Layer *layer) {
-    if (layer->computedValues != NULL) {
+    if (!layer) {
+        return;
+    }
+
+    if (layer->computedValues) {
         FreeTensor(layer->computedValues);
+    }
+    if (layer->computedValueGradients) {
+        FreeTensor(layer->computedValueGradients);
     }
 
     switch (layer->uType) {
@@ -265,11 +288,11 @@ void PrintLayerInfo(Layer *layer) {
 void InitIOLayerTensor(Layer *layer) {
     switch (layer->uType) {
         case VECTOR_LAYER: {
-            layer->computedValues = NewTensorVector(NewFilledVector(layer->vectorLayer->size, 0));
+            layer->computedValues = NewTensorEncapsulateVector(NewFilledVector(layer->vectorLayer->size, 0));
             break;
         }
         case MATRIX_LAYER: {
-            layer->computedValues = NewTensorMatrix(NewFilledMatrix(layer->matrixLayer->r, layer->matrixLayer->c, 0));
+            layer->computedValues = NewTensorEncapsulateMatrix(NewFilledMatrix(layer->matrixLayer->r, layer->matrixLayer->c, 0));
             break;
         }
 
@@ -278,6 +301,9 @@ void InitIOLayerTensor(Layer *layer) {
             exit(EXIT_FAILURE_CODE);
         }
     }
+
+    layer->computedValueGradients = CloneTensorEmpty(layer->computedValues);
+
     return;
 
     error: {
@@ -293,7 +319,7 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
                 goto error;
             }
 
-            layer->computedValues = NewTensorVector(NewFilledVector(layer->linearLayer->size, 0));
+            layer->computedValues = NewTensorEncapsulateVector(NewFilledVector(layer->linearLayer->size, 0));
 
             break;
         }
@@ -314,7 +340,7 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
                 c = previousLayer->computedValues->matrix2d->c;
             }
 
-            layer->computedValues = NewTensorMatrix3d(NewFilledMatrix3d(depth * layer->convolutionLayer->kernelCount, r-padding, c-padding, 0));
+            layer->computedValues = NewTensorEncapsulateMatrix3d(NewFilledMatrix3d(depth * layer->convolutionLayer->kernelCount, r-padding, c-padding, 0));
 
             break;
         }
@@ -338,7 +364,7 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
                         exit(EXIT_FAILURE_CODE);
                     }
 
-                    layer->computedValues = NewTensorMatrix(NewFilledMatrix(previousLayer->computedValues->matrix2d->r / poolSize, previousLayer->computedValues->matrix2d->c / poolSize, 0));
+                    layer->computedValues = NewTensorEncapsulateMatrix(NewFilledMatrix(previousLayer->computedValues->matrix2d->r / poolSize, previousLayer->computedValues->matrix2d->c / poolSize, 0));
 
                     break;
                 }
@@ -348,7 +374,7 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
                         exit(EXIT_FAILURE_CODE);
                     }
 
-                    layer->computedValues =NewTensorMatrix3d(NewFilledMatrix3d(previousLayer->computedValues->matrix3d->depth, previousLayer->computedValues->matrix3d->r / poolSize, previousLayer->computedValues->matrix3d->c / poolSize, 0));
+                    layer->computedValues =NewTensorEncapsulateMatrix3d(NewFilledMatrix3d(previousLayer->computedValues->matrix3d->depth, previousLayer->computedValues->matrix3d->r / poolSize, previousLayer->computedValues->matrix3d->c / poolSize, 0));
 
                     break;
                 }
@@ -362,7 +388,7 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
         }
 
         case FLATTENING_LAYER: {
-            layer->computedValues = NewTensorVector(NewFilledVector(previousLayer->computedValues->size, 0));
+            layer->computedValues = NewTensorEncapsulateVector(NewFilledVector(previousLayer->computedValues->size, 0));
 
             break;
         }
@@ -377,6 +403,9 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
             exit(EXIT_FAILURE_CODE);
         }
     }
+
+    layer->computedValueGradients = CloneTensorEmpty(layer->computedValues);
+
     return;
 
     error: {
@@ -385,7 +414,7 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
     }
 } //InitHiddenLayerTensor()
 
-// TO-DO
+
 void ComputeLayerValues(Layer *previousLayer, Layer *layer) {
     switch (layer->uType) {
         case LINEAR_LAYER: {
@@ -527,7 +556,7 @@ void ComputeLayerValues(Layer *previousLayer, Layer *layer) {
         case SOFTMAX_LAYER: {
 
             double* previousValues = GetTensorValues(previousLayer->computedValues);
-            double* values = GetTensorValues(previousLayer->computedValues);
+            double* values = GetTensorValues(layer->computedValues);
 
             double sum = 0;
 
@@ -555,7 +584,101 @@ void ComputeLayerValues(Layer *previousLayer, Layer *layer) {
     }
 } // InitHiddenLayerTensor()
 
-NeuralNetwork* NewNeuralNetwork(unsigned int maxTrainingRounds, double learningRate, char *name) {
+void ComputeHiddenLayerGradients(Layer *previousLayer, Layer *layer, Layer *proceedingLayer, double lr) {
+
+    switch (layer->uType) {
+        case LINEAR_LAYER: {
+
+            CopyTensorValues(layer->computedValueGradients, proceedingLayer->computedValueGradients, false);
+
+
+            Matrix* weightGradients = layer->linearLayer->weightGradients;
+
+            for (int i = 0; i < weightGradients->r; i++) {
+                for (int j = 0; j < weightGradients->c; j++) {
+                    double gradient = GetTensorValues(layer->computedValueGradients)[i] *GetTensorValues(previousLayer->computedValues)[j];
+                    SetMatrixValueRowCol(weightGradients, i, j, gradient);
+                }
+                layer->linearLayer->biasGradients->values[i] = GetTensorValues(layer->computedValueGradients)[i];
+            }
+
+            Matrix *weightsTransposed = TransposeMatrix(layer->linearLayer->weights);
+            Vector *vGradients = VectorMatrixMultiply(weightsTransposed, layer->computedValueGradients->vector);
+
+            for (int i = 0; i < vGradients->size; i++) {
+                GetTensorValues(previousLayer->computedValueGradients)[i] = vGradients->values[i];
+            }
+
+            FreeVector(vGradients);
+            FreeMatrix(weightsTransposed);
+
+            for (int i = 0; i < weightGradients->r; i++) {
+                for (int j = 0; j < weightGradients->c; j++) {
+                    double gradient = GetMatrixValueRowCol(weightGradients, i, j);
+                    double weight = GetMatrixValueRowCol(layer->linearLayer->weights, i, j);
+                    SetMatrixValueRowCol(layer->linearLayer->weights, i, j, weight - lr*gradient);
+                }
+                layer->linearLayer->biases->values[i] -= lr * layer->linearLayer->biasGradients->values[i];
+            }
+
+            break;
+        }
+        case CONVOLUTION_LAYER: {
+            fprintf(stderr, "Error: Convolution and Pooling layer gradients not implemented yet\n");
+            exit(EXIT_FAILURE_CODE);
+            break;
+        }
+        case ELEMENTWISE_LAYER: {
+
+            for (int i = 0; i < layer->computedValueGradients->size; i++) {
+                double gradient = GetTensorValues(proceedingLayer->computedValueGradients)[i] * layer->elementWiseLayer->gradientFunction(GetTensorValues(previousLayer->computedValues)[i]);
+                GetTensorValues(previousLayer->computedValueGradients)[i] = gradient;
+            }
+            break;
+        }
+        case POOLING_LAYER: {
+            fprintf(stderr, "Error: Convolution and Pooling layer gradients not implemented yet\n");
+            exit(EXIT_FAILURE_CODE);
+            break;
+        }
+        case FLATTENING_LAYER: {
+
+            CopyTensorValues(previousLayer->computedValueGradients, layer->computedValueGradients, false);
+            break;
+        }
+        case SOFTMAX_LAYER: {
+
+            CopyTensorValues(previousLayer->computedValueGradients, layer->computedValueGradients, false);
+            break;
+        }
+
+        default: {
+            fprintf(stderr, "Error: Unknown layer type '%d' in ComputeLayerGradients()\n", layer->uType);
+            exit(EXIT_FAILURE_CODE);
+        }
+    }
+}
+
+void ComputeIOLayerGradients(Layer *previousLayer, Layer *layer) {
+    switch (layer->uType) {
+        case VECTOR_LAYER: {
+
+            CopyTensorValues(previousLayer->computedValueGradients, layer->computedValueGradients, false);
+            break;
+        }
+        case MATRIX_LAYER: {
+
+            CopyTensorValues(previousLayer->computedValueGradients, layer->computedValueGradients, false);
+            break;
+        }
+        default: {
+            fprintf(stderr, "Error: Unknown layer type '%d' in ComputeIOLayerGradients()\n", layer->uType);
+            exit(EXIT_FAILURE_CODE);
+        }
+    }
+}
+
+NeuralNetwork* NewNeuralNetwork(unsigned int trainingRounds, unsigned int maxRoundSteps, double learningRate, char *name) {
     NeuralNetwork *nNet = malloc(sizeof(NeuralNetwork));
 
     nNet->name = malloc(sizeof(char) * (strlen(name)+1));
@@ -564,19 +687,22 @@ NeuralNetwork* NewNeuralNetwork(unsigned int maxTrainingRounds, double learningR
 
     nNet->stage = NET_EMPTY;
     nNet->hiddenLayerCount = 0;
-    nNet->maxTrainingRounds = maxTrainingRounds;
+    nNet->trainingRounds = trainingRounds;
+    nNet->maxRoundSteps = maxRoundSteps;
     nNet->learningRate = learningRate;
 
     nNet->inputLayer = NULL;
     nNet->outputLayer = NULL;
     nNet->hiddenLayers = NULL;
 
+    nNet->trainingStepCount = 0;
+
     return nNet;
 }
 
 void PrintNeuralNetworkInfo(NeuralNetwork *nNet) {
     printf("\nNeural Network '%s' info:\n", nNet->name);
-    printf("Stage: %d, Layer count: %d, Training Rounds: %d, Learning Rate: %f\n", nNet->stage, nNet->hiddenLayerCount+2, nNet->maxTrainingRounds, nNet->learningRate);
+    printf("Stage: %d, Layer count: %d, Training Rounds: %d, Training Rounds Max Steps: %d, Learning Rate: %f\n", nNet->stage, nNet->hiddenLayerCount+2, nNet->trainingRounds, nNet->maxRoundSteps, nNet->learningRate);
     printf("Network Layers:\n");
     PrintLayerInfo(nNet->inputLayer);
     for (int i = 0; i<nNet->hiddenLayerCount; i++) {
@@ -591,59 +717,66 @@ void FreeNeuralNetwork(NeuralNetwork *nNet) {
     for (unsigned int i = 0; i<nNet->hiddenLayerCount; i++) {
         FreeLayer(nNet->hiddenLayers[i]);
     }
+    free(nNet->name);
     free(nNet);
 }
 
 //precondition: Input layer is initialised
 void AddHiddenLayer(NeuralNetwork *nNet, Layer *layer) {
-    if (nNet->stage > 1) {
+    if (nNet->stage > NET_LAYERS_ADDED) {
         fprintf(stderr, "Error: Network layers have been finalized");
         exit(EXIT_FAILURE_CODE);
     }
-    nNet->stage = 1;
+    nNet->stage = NET_LAYERS_ADDED;
 
     nNet->hiddenLayerCount++;
-    Layer** temp = malloc(sizeof(Layer**) * nNet->hiddenLayerCount);
-    memcpy(temp, nNet->hiddenLayers, sizeof(Layer**) * (nNet->hiddenLayerCount-1));
+    Layer** temp = malloc(sizeof(Layer*) * nNet->hiddenLayerCount);
+    memcpy(temp, nNet->hiddenLayers, sizeof(Layer*) * (nNet->hiddenLayerCount-1));
+    free(nNet->hiddenLayers);
     nNet->hiddenLayers = temp;
     nNet->hiddenLayers[nNet->hiddenLayerCount-1] = layer;
 }
 
 void SetInputLayer(NeuralNetwork *nNet, Layer *layer) {
-    if (nNet->stage > 1) {
+    if (nNet->stage > NET_LAYERS_ADDED) {
         fprintf(stderr, "Error: Network layers have been finalized");
         exit(EXIT_FAILURE_CODE);
     }
-    nNet->stage = 1;
+    nNet->stage = NET_LAYERS_ADDED;
     nNet->inputLayer = layer;
 }
 
 //precondition: Hidden layers are finalised
 void SetOutputLayer(NeuralNetwork *nNet, Layer *layer) {
-    if (nNet->stage > 1) {
+    if (nNet->stage > NET_LAYERS_ADDED) {
         fprintf(stderr, "Error: Network layers have been finalized");
         exit(EXIT_FAILURE_CODE);
     }
-    nNet->stage = 1;
+    nNet->stage = NET_LAYERS_ADDED;
     nNet->outputLayer = layer;
 }
 
 void FinalizeNeuralNetworkLayers(NeuralNetwork *nNet) {
-    if (nNet->stage != 1) {
+    if (nNet->stage != NET_LAYERS_ADDED) {
         fprintf(stderr, "Error: Attempted to finalize layers of network in stage %d", nNet->stage);
         exit(EXIT_FAILURE_CODE);
     }
-    nNet->stage = 2;
+    nNet->stage = NET_LAYERS_FINALIZED;
 
     InitIOLayerTensor(nNet->inputLayer);
 
     // The first hidden layer's tensors are initialised outside the for loop as the previous layer will be the input layer;
     InitHiddenLayerTensor(nNet->inputLayer, nNet->hiddenLayers[0]);
+    if (nNet->hiddenLayers[0]->uType == LINEAR_LAYER) {
+        nNet->hiddenLayers[0]->linearLayer->weights = NewHeRandomMatrix(nNet->hiddenLayers[0]->computedValues->size, nNet->inputLayer->computedValues->size);
+        nNet->hiddenLayers[0]->linearLayer->weightGradients = NewFilledMatrix(nNet->hiddenLayers[0]->computedValues->size, nNet->inputLayer->computedValues->size, 0);
+    }
 
     for (int i = 1; i<nNet->hiddenLayerCount; i++) {
         InitHiddenLayerTensor(nNet->hiddenLayers[i-1], nNet->hiddenLayers[i]);
         if (nNet->hiddenLayers[i]->uType == LINEAR_LAYER) {
-            nNet->hiddenLayers[i]->linearLayer->weights = NewRandomisedMatrix(nNet->hiddenLayers[i]->computedValues->size, nNet->hiddenLayers[i-1]->computedValues->size);
+            nNet->hiddenLayers[i]->linearLayer->weights = NewHeRandomMatrix(nNet->hiddenLayers[i]->computedValues->size, nNet->hiddenLayers[i-1]->computedValues->size);
+            nNet->hiddenLayers[i]->linearLayer->weightGradients = NewFilledMatrix(nNet->hiddenLayers[i]->computedValues->size, nNet->hiddenLayers[i-1]->computedValues->size, 0);
         }
     }
 
@@ -651,9 +784,15 @@ void FinalizeNeuralNetworkLayers(NeuralNetwork *nNet) {
 } //Call after adding layers
 
 Tensor* RunNeuralNetwork(NeuralNetwork *nNet, Tensor *input) {
+    /* commented out because training also uses this for forward run.
     if (nNet->stage < 3) {
-        fprintf(stderr, "Warning: Attempted to run untrained neural network (stage %d). Required stage: >= 3", nNet->stage);
+        //fprintf(stderr, "Warning: Attempted to run untrained neural network (stage %d). Required stage: >= 3", nNet->stage);
         //exit(EXIT_FAILURE_CODE);
+    }
+    */
+    if (nNet->stage < NET_LAYERS_FINALIZED) {
+        fprintf(stderr, "Error: Attempted to run un-finalized neural network (stage %d). Required stage: >= 2", nNet->stage);
+        exit(EXIT_FAILURE_CODE);
     }
 
     CopyTensorValues(nNet->inputLayer->computedValues, input, true);
@@ -670,62 +809,159 @@ Tensor* RunNeuralNetwork(NeuralNetwork *nNet, Tensor *input) {
     return nNet->outputLayer->computedValues;
 }
 
+Tensor* NetworkTrainingStep(NeuralNetwork *nNet, Tensor *input, int expected, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected)) {
+
+    Tensor *netOutput = RunNeuralNetwork(nNet, input); //don't free netOutput. just a reference
+
+
+    double loss = lossFunction(netOutput, nNet->outputLayer->computedValueGradients, expected);
+
+    printf("\n===== Training Step %8d =====\n", nNet->trainingStepCount++);
+    printf("Actual: %d. Prediction: %d. Prediction Weight: %f\nOutput Vector: ", expected, GetTensorMaxIndex(netOutput), GetTensorValuePos(netOutput, GetTensorMaxIndex(netOutput)));
+    PrintVectorHorizontal(netOutput->vector);
+    printf("Loss: %f\n", loss);
+    printf("==================================\n\n");
+
+
+    ComputeIOLayerGradients(nNet->hiddenLayers[nNet->hiddenLayerCount-1], nNet->outputLayer);
+
+    for (int i = (int)nNet->hiddenLayerCount - 1; i >= 0; i--) {
+        Layer *currentLayer = nNet->hiddenLayers[i];
+        Layer *previousLayer = (i == 0) ? nNet->inputLayer : nNet->hiddenLayers[i-1];
+        Layer *nextLayer = (i == nNet->hiddenLayerCount - 1) ? nNet->outputLayer : nNet->hiddenLayers[i+1];
+
+        ComputeHiddenLayerGradients(previousLayer, currentLayer, nextLayer, nNet->learningRate);
+    }
+
+    return netOutput;
+}
+
+void TrainNetwork(NeuralNetwork *nNet, CSVFile *csvTrain, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected)) {
+    if (nNet->stage < NET_LAYERS_FINALIZED) {
+        fprintf(stderr, "Error: Attempted to train un-finalized neural network (stage %d). Required stage: >= 2", nNet->stage);
+        exit(EXIT_FAILURE_CODE);
+    }
+    unsigned int trainingSteps = nNet->trainingStepCount;
+    if (trainingSteps == 0) {
+        trainingSteps = csvTrain->rows;
+    }
+
+    MnistDigit *mnistDigit = NewMnistDigit();
+    RewindCSV(csvTrain);
+
+    for (int i = 0; i<nNet->trainingRounds; i++) {
+        SkipLine(csvTrain);
+        for (int j = 0; j<nNet->maxRoundSteps; j++) {
+            ReadDigitFromCSV(csvTrain, mnistDigit);
+
+            Tensor* inputTensor = NewTensorCloneMatrix(mnistDigit->pixels); //needs to be fred
+            Tensor *netOutput = NetworkTrainingStep(nNet, inputTensor, mnistDigit->digit, lossFunction); //does not need to be freed. it's just a reference to the net's output tensor
+            FreeTensor(inputTensor); //maybe optimize this later?
+        }
+        RewindCSV(csvTrain);
+    }
+
+    FreeMnistDigit(mnistDigit);
+
+    nNet->stage = NET_TRAINED;
+}
+
+void TestNetwork(NeuralNetwork  *nNet, CSVFile *csvTest, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected)) {
+    if (nNet->stage < NET_TRAINED) {
+        fprintf(stderr, "Warning: Attempted to test un-trained neural network (stage %d). Required stage: >= 3", nNet->stage);
+        //exit(EXIT_FAILURE_CODE);
+    }
+
+    MnistDigit *mnistDigit = NewMnistDigit();
+    RewindCSV(csvTest);
+    SkipLine(csvTest);
+    unsigned int correct = 0;
+    unsigned int errors = 0;
+
+    for (int i = 0; i<csvTest->rows; i++) {
+        ReadDigitFromCSV(csvTest, mnistDigit);
+
+        Tensor* inputTensor = NewTensorCloneMatrix(mnistDigit->pixels); //needs to be fred
+        Tensor *netOutput = RunNeuralNetwork(nNet, inputTensor); //don't free netOutput. just a reference
+
+        double loss = lossFunction(netOutput, nNet->outputLayer->computedValueGradients, mnistDigit->digit);
+
+        if (mnistDigit->digit == GetTensorMaxIndex(netOutput)) {
+            correct++;
+        } else {
+            errors++;
+        }
+
+        FreeTensor(inputTensor); //maybe optimize this later?
+    }
+
+    printf("\n========== Test Results: ==========\n", nNet->trainingStepCount++);
+    printf("Tested %d digits. Correct: %d, Incorrect: %d\n", correct + errors, correct, errors);
+    printf("Total Accuracy: %.3f%%\n", 100.0 * (double)correct / ((double)correct + (double)errors));
+    printf("===================================\n\n");
+
+    FreeMnistDigit(mnistDigit);
+}
+
 int NeuralNetworkMain() {
 
-    NeuralNetwork *nNet = NewNeuralNetwork(6, 0.05, "MNIST Test");
+    NeuralNetwork *nNet = NewNeuralNetwork(MNIST_TRAINING_ROUNDS, MNIST_MAX_TRAINING_STEPS, MNIST_LEARNING_RATE, "MNIST Test");
 
     SetInputLayer(nNet, NewMatrixLayer(28, 28));
+
+    // Convolution Network (Convolutional layers and pooling layers are not implemented yet)
+    /*
     AddHiddenLayer(nNet, NewConvolutionLayer(8, 3));
     AddHiddenLayer(nNet, NewPoolingLayer(2, MAX_POOLING));
     AddHiddenLayer(nNet, NewFlatteningLayer());
     AddHiddenLayer(nNet, NewLinearLayer(500));
-    AddHiddenLayer(nNet, NewElementWiseLayer(Relu));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
     AddHiddenLayer(nNet, NewLinearLayer(100));
-    AddHiddenLayer(nNet, NewElementWiseLayer(Relu));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
     AddHiddenLayer(nNet, NewLinearLayer(10));
-    AddHiddenLayer(nNet, NewElementWiseLayer(Relu));
     AddHiddenLayer(nNet, NewSoftMaxLayer());
+    */
+
+    // Non-Convolutional Network
+
+    AddHiddenLayer(nNet, NewFlatteningLayer());
+    AddHiddenLayer(nNet, NewLinearLayer(512));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    AddHiddenLayer(nNet, NewLinearLayer(256));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    AddHiddenLayer(nNet, NewLinearLayer(128));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    AddHiddenLayer(nNet, NewLinearLayer(10));
+    AddHiddenLayer(nNet, NewSoftMaxLayer());
+
+
     SetOutputLayer(nNet, NewVectorLayer(10));
 
     FinalizeNeuralNetworkLayers(nNet);
 
     // CSV-MNIST
+    CSVFile *csvTrain; //csv file with data used to train the network (size = 60000)
+    CSVFile *csvTest; //csv file with data used to test the trained network (size = 10000)
 
-    CSVFile *csv;
-
-    // Windows
-    // csv = OpenCSVFile("..\\data\\mnist_test.csv");
-
-    // Unix
-    csv = OpenCSVFile("../data/mnist_test.csv");
-
-    CSVInfo(csv);
-
-    int count = 0;
-    char buffer[CSV_LINE_MAX_BUFF];
-
-    SkipLine(csv);
-
-    MnistDigit *mnistDigit = NewMnistDigit();
-
-    for (int i = 0; i<1; i++) {
-        ReadDigitFromCSV(csv, mnistDigit);
-        PrintMnistDigit(mnistDigit);
-        Tensor* inputTensor = NewTensorMatrix(mnistDigit->pixels);
-        Tensor *netOutput = RunNeuralNetwork(nNet, inputTensor);
-        FreeTensor(inputTensor);
-
-
-
-        PrintVectorHorizontal(netOutput->vector);
+    if (PLATFORM == PLATFORM_WINDOWS) {
+        csvTrain = OpenCSVFile("..\\data\\mnist_train.csv");
+        csvTest = OpenCSVFile("..\\data\\mnist_test.csv");
+    } else {
+        csvTrain = OpenCSVFile("../data/mnist_train.csv");
+        csvTest = OpenCSVFile("../data/mnist_test.csv");
     }
 
+
+    TrainNetwork(nNet, csvTrain, CalculateMnistLoss);
     PrintNeuralNetworkInfo(nNet);
+    TestNetwork(nNet, csvTest, CalculateMnistLoss);
+
+
 
     //Cleanup
     FreeNeuralNetwork(nNet);
-    free(mnistDigit);
-    FreeCSV(csv);
+    FreeCSV(csvTrain);
+    FreeCSV(csvTest);
 
     return 0;
 }

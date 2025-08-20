@@ -6,6 +6,8 @@
 #define ACTIVATIONFUNCTIONS_H
 #include "linearalgebra.h"
 
+#define LEAK_COEFFICIENT 0.1
+
 // List from https://en.wikipedia.org/wiki/Activation_function#Table_of_activation_functions
 
 double Identity(double x);
@@ -15,6 +17,13 @@ double Tanh(double x);
 double Relu(double x);
 double LeakyRelu(double x);
 //double ParametricLeakyRelu(double x, double a);
+
+double IdentityPrime(double x);
+double BinaryStepPrime(double x);
+double LogisticSigmoidPrime(double x);
+double TanhPrime(double x);
+double ReluPrime(double x);
+double LeakyReluPrime(double x);
 
 Matrix* ActivateMatrix(Matrix *m, double (*aFunc)(double));
 

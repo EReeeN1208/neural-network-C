@@ -50,6 +50,11 @@ int SkipLine(CSVFile* csvfile) {
     return (int)++csvfile->lastLineRead;
 }
 
+void RewindCSV(CSVFile* csvfile) {
+    rewind(csvfile->file);
+    csvfile->lastLineRead = 0;
+}
+
 unsigned int CountLines(char *path) {
     FILE* file = fopen(path, "r");
 

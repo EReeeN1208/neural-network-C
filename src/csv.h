@@ -23,6 +23,7 @@ CSVFile* OpenCSVFile(char *path);
 CSVFile* NewCSV(FILE* file, unsigned int rows);
 int GetNextLine(CSVFile* csvfile, char* buffer);
 int SkipLine(CSVFile* csvfile); //Use to skip header
+void RewindCSV(CSVFile* csvfile);
 unsigned int CountLines(char *path);
 
 void CSVInfo(CSVFile* csvfile);

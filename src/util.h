@@ -13,6 +13,15 @@
 
 #define EXIT_FAILURE_CODE 1
 
+#define PLATFORM_WINDOWS 0
+#define PLATFORM_UNIX 1
+
+#ifdef _WIN32
+#define PLATFORM PLATFORM_WINDOWS
+#else //_WIN32
+#define PLATFORM PLATFORM_UNIX
+#endif //_WIN32
+
 
 int StrToInt(char *s, unsigned int maxLen);
 unsigned char StrToUChar(char *s, unsigned int maxLen);

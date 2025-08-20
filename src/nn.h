@@ -5,6 +5,7 @@
 #ifndef NN_H
 #define NN_H
 
+#include "csv.h"
 #include "linearalgebra.h"
 
 // Trainable layers
@@ -44,12 +45,15 @@ typedef struct {
     unsigned int size;
     Matrix *weights;
     Vector *biases;
+    Matrix *weightGradients;
+    Vector *biasGradients;
 } LinearLayer;
 
 typedef struct {
     unsigned int kernelCount;
     unsigned int kernelSize;
     Matrix **kernels;
+    Matrix **kernelGradients;
 } ConvolutionLayer;
 
 
@@ -65,6 +69,7 @@ typedef struct {
 
 typedef struct {
     double (*function)(double);
+    double (*gradientFunction)(double);
 } ElementWiseLayer;
 
 typedef struct {
@@ -97,6 +102,7 @@ typedef struct {
         SoftMaxLayer *softMaxLayer;
     };
     Tensor *computedValues;
+    Tensor *computedValueGradients;
 } Layer;
 
 
@@ -110,8 +116,11 @@ typedef struct {
 
     unsigned int stage;
     unsigned int hiddenLayerCount;
-    unsigned int maxTrainingRounds;
+    unsigned int trainingRounds;
+    unsigned int maxRoundSteps; // 0 for unrestricted
     double learningRate;
+
+    unsigned int trainingStepCount;
 
 } NeuralNetwork;
 
@@ -129,7 +138,7 @@ Layer* NewMatrixLayer(unsigned int r, unsigned int c);
 void FreeMatrixLayer(Layer *layer);
 
 
-Layer* NewElementWiseLayer(double (*function)(double));
+Layer* NewElementWiseLayer(double (*function)(double), double (*gradientFunction)(double));
 void FreeElementWiseLayer(Layer *layer);
 
 Layer* NewPoolingLayer(unsigned int poolSize, unsigned int poolingMethod);
@@ -148,7 +157,10 @@ void InitIOLayerTensor(Layer *layer);
 void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer);
 void ComputeLayerValues(Layer *previousLayer, Layer *layer);
 
-NeuralNetwork* NewNeuralNetwork(unsigned int maxTrainingRounds, double learningRate, char *name);
+void ComputeHiddenLayerGradients(Layer *previousLayer, Layer *layer, Layer *proceedingLayer, double lr);
+void ComputeIOLayerGradients(Layer *previousLayer, Layer *layer);
+
+NeuralNetwork* NewNeuralNetwork(unsigned int trainingRounds, unsigned int maxRoundSteps, double learningRate, char *name);
 void PrintNeuralNetworkInfo(NeuralNetwork *nNet);
 void FreeNeuralNetwork(NeuralNetwork *nNet);
 
@@ -159,6 +171,9 @@ void SetOutputLayer(NeuralNetwork *nNet, Layer *layer);
 void FinalizeNeuralNetworkLayers(NeuralNetwork *nNet); //Call after adding all layers
 
 Tensor* RunNeuralNetwork(NeuralNetwork *nNet, Tensor *input); //Do not free the output tensor
+Tensor* NetworkTrainingStep(NeuralNetwork *nNet, Tensor *input, int expected, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected)); //Do not free the output tensor
+void TrainNetwork(NeuralNetwork *nNet, CSVFile *csvTrain, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected));
+void TestNetwork(NeuralNetwork  *nNet, CSVFile *csvTest, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected));
 
 
 int NeuralNetworkMain();

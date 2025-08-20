@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tgmath.h>
 
 #include "util.h"
 
@@ -47,7 +48,12 @@ Vector* NewRandomisedVector(unsigned int size) {
 
 
 void FreeVector(Vector *v) {
-    free(v->values);
+    if (v == NULL) {
+        return;
+    }
+    if (v->values != NULL) {
+        free(v->values);
+    }
     free(v);
 }
 
@@ -111,6 +117,35 @@ Matrix* GetIdentityMatrix(unsigned int len) {
 void FreeMatrix(Matrix *m) {
     free(m->values);
     free(m);
+}
+
+
+Matrix* NewXavierRandomMatrix(unsigned int r, unsigned int c) {
+    Matrix *m = NewEmptyMatrix(r, c);
+
+    const unsigned int size = r * c;
+    double xavier_scale = sqrt(6.0 / (double)(r + c));
+
+    for (int i = 0; i < size; i++) {
+        m->values[i] = GetRandomNormalised() * xavier_scale;
+    }
+
+    return m;
+}
+
+
+Matrix* NewHeRandomMatrix(unsigned int r, unsigned int c) {
+    Matrix *m = NewEmptyMatrix(r, c);
+
+    const unsigned int size = r * c;
+
+    double he_scale = sqrt(2.0 / (double)c);
+
+    for (int i = 0; i < size; i++) {
+        m->values[i] = GetRandomNormalised() * he_scale;
+    }
+
+    return m;
 }
 
 
@@ -277,9 +312,15 @@ Matrix* TransposeMatrix(Matrix *m) {
     unsigned int size = m->r * m->c;
 
     Matrix* mResult = NewEmptyMatrix(m->c, m->r);
-
+    /*
     for (int i = 0; i < size; i++) {
         mResult->values[i] = GetMatrixValueRowCol(m, i % m->c, i / m->c);
+    }
+    */
+    for (int i = 0; i<m->r; i++) {
+        for (int j = 0; j<m->c; j++) {
+            SetMatrixValueRowCol(mResult, j, i, GetMatrixValueRowCol(m, i, j));
+        }
     }
     return mResult;
 }
@@ -456,7 +497,8 @@ Matrix* ConvolveMatrix(Matrix *image, Matrix *kernel) {
 }
 
 Vector* FlattenMatrix(Matrix *m) {
-    Vector *v = NewEmptyVector(m->r * m->c);
+    Vector *v = malloc(sizeof(Vector));
+    v->size = m->r * m->c;
     v->values = m->values;
     free(m);
     return v;
@@ -491,7 +533,7 @@ Matrix* GetBlurKernel(unsigned int size) {
 
 
 
-Tensor* NewTensorVector(Vector* v) {
+Tensor* NewTensorEncapsulateVector(Vector* v) {
     Tensor *t = malloc(sizeof(Tensor));
     t->uType = VECTOR;
     t->vector = v;
@@ -499,7 +541,7 @@ Tensor* NewTensorVector(Vector* v) {
 
     return t;
 }
-Tensor* NewTensorMatrix(Matrix* m) {
+Tensor* NewTensorEncapsulateMatrix(Matrix* m) {
     Tensor *t = malloc(sizeof(Tensor));
     t->uType = MATRIX2D;
     t->matrix2d = m;
@@ -507,7 +549,7 @@ Tensor* NewTensorMatrix(Matrix* m) {
 
     return t;
 }
-Tensor* NewTensorMatrix3d(Matrix3d* m3d) {
+Tensor* NewTensorEncapsulateMatrix3d(Matrix3d* m3d) {
     Tensor *t = malloc(sizeof(Tensor));
     t->uType = MATRIX3D;
     t->matrix3d = m3d;
@@ -515,8 +557,40 @@ Tensor* NewTensorMatrix3d(Matrix3d* m3d) {
 
     return t;
 }
+
+Tensor* NewTensorCloneVector(Vector* v) {
+    Tensor *t = malloc(sizeof(Tensor));
+    t->uType = VECTOR;
+    t->vector = NewEmptyVector(v->size);
+    t->size = v->size;
+
+    memcpy(t->vector->values, v->values, sizeof(double) * t->size);
+
+    return t;
+}
+Tensor* NewTensorCloneMatrix(Matrix* m) {
+    Tensor *t = malloc(sizeof(Tensor));
+    t->uType = MATRIX2D;
+    t->matrix2d = NewEmptyMatrix(m->r, m->c);
+    t->size = m->r * m->c;
+
+    memcpy(t->matrix2d->values, m->values, sizeof(double) * t->size);
+
+    return t;
+}
+Tensor* NewTensorCloneMatrix3d(Matrix3d* m3d) {
+    Tensor *t = malloc(sizeof(Tensor));
+    t->uType = MATRIX3D;
+    t->matrix3d = NewEmptyMatrix3d(m3d->depth, m3d->r, m3d->c);
+    t->size = GetMatrix3dSize(m3d);
+
+    memcpy(t->matrix3d->values, m3d->values, sizeof(double) * t->size);
+
+    return t;
+}
+
 Tensor* CloneTensorEmpty(Tensor *t) {
-    Tensor *tNew = malloc(sizeof(Tensor));
+    Tensor *tNew = calloc(1, sizeof(Tensor));
     tNew->size = t->size;
     tNew->uType = t->uType;
 
@@ -543,8 +617,12 @@ Tensor* CloneTensorEmpty(Tensor *t) {
 }
 
 void CopyTensorValues(Tensor *tDst, Tensor *tSrc, _Bool checkTensorType) {
-    if (tDst->size != tSrc->size || ((tDst->uType != tSrc->uType) && checkTensorType)) {
+    if ((tDst->uType != tSrc->uType) && checkTensorType) {
         fprintf(stderr, "Error: The input and output tensor's are not compatible. CopyTensorValues()");
+        exit(EXIT_FAILURE_CODE);
+    }
+    if (tDst->size != tSrc->size) {
+        fprintf(stderr, "Error: The input and output tensors' sizes do not match. %d, %d. CopyTensorValues()", tDst->size, tSrc->size);
         exit(EXIT_FAILURE_CODE);
     }
 
@@ -593,6 +671,7 @@ unsigned int GetTensorMaxIndex(Tensor *t) {
 }
 
 void FreeTensor(Tensor *t) {
+    //printf("\n\n%d, %d\n\n", t->size, t->uType);
     switch (t->uType) {
         case VECTOR: {
             FreeVector(t->vector);
@@ -734,9 +813,9 @@ void PrintVectorVertical(Vector *v) {
 }
 
 void PrintVectorHorizontal(Vector *v) {
-    printf("\n[%+8.4f", v->values[1]);
+    printf("[%+8.4f", v->values[1]);
     for (int i = 1; i < v->size; i++) {
-        printf(", %+8.4f", v->values[i]);
+        printf(", %+12.4f", v->values[i]);
     }
     printf("]\n");
 }

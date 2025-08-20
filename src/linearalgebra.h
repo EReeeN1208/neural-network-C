@@ -69,6 +69,9 @@ Matrix* NewRandomisedMatrix(unsigned int r, unsigned int c);
 Matrix* GetIdentityMatrix(unsigned int len);
 void FreeMatrix(Matrix *m);
 
+Matrix* NewXavierRandomMatrix(unsigned int r, unsigned int c);
+Matrix* NewHeRandomMatrix(unsigned int r, unsigned int c);
+
 Matrix3d* NewEmptyMatrix3d(unsigned int depth, unsigned int r, unsigned int c);
 Matrix3d* NewFilledMatrix3d(unsigned int depth, unsigned int r, unsigned int c, double fill);
 Matrix3d* NewRandomisedMatrix3d(unsigned int depth, unsigned int r, unsigned int c);
@@ -113,9 +116,14 @@ Matrix* GetIdentityKernel(unsigned int size);
 Matrix* GetEdgeDetectionKernel(); //3x3
 Matrix* GetBlurKernel(unsigned int size);
 
-Tensor* NewTensorVector(Vector* v);
-Tensor* NewTensorMatrix(Matrix* m);
-Tensor* NewTensorMatrix3d(Matrix3d* m3d);
+Tensor* NewTensorEncapsulateVector(Vector* v);
+Tensor* NewTensorEncapsulateMatrix(Matrix* m);
+Tensor* NewTensorEncapsulateMatrix3d(Matrix3d* m3d);
+
+Tensor* NewTensorCloneVector(Vector* v);
+Tensor* NewTensorCloneMatrix(Matrix* m);
+Tensor* NewTensorCloneMatrix3d(Matrix3d* m3d);
+
 Tensor* CloneTensorEmpty(Tensor *t);
 void CopyTensorValues(Tensor *tDst, Tensor *tSrc, _Bool checkTensorType); // Will check to make sure the sizes and types of tensors match
 

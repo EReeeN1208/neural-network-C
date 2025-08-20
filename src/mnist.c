@@ -42,7 +42,7 @@ int ReadDigitFromCSV(CSVFile *csv, MnistDigit *d) {
     d->digit = (char)GetVectorValue(vLine, 0);
 
     for (int px = 0; px<MNIST_PIXEL_COUNT; px++) {
-        SetMatrixValuePos(d->pixels, px, GetVectorValue(vLine, px+1));
+        SetMatrixValuePos(d->pixels, px, GetVectorValue(vLine, px+1) / 255.0);
     }
 
     FreeVector(vLine);
@@ -55,12 +55,49 @@ MnistDigit* NewMnistDigit() {
     return d;
 }
 
-double CalculateMnistLoss(Tensor* probabilities, char digit) {
-    if (probabilities->size != 10) {
-        fprintf(stderr, "Error: tried to calculate MNIST loss for tensor with invalid size: %d", probabilities->size);
+double CalculateMnistLoss(Tensor* probabilities, Tensor* outputGradient, int digit) {
+    if (probabilities->size != MNIST_DIGIT_COUNT || outputGradient->size != MNIST_DIGIT_COUNT) {
+        fprintf(stderr, "Error: tried to calculate MNIST loss for tensor with invalid sizes: %d, %d", probabilities->size, outputGradient->size);
         exit(EXIT_FAILURE_CODE);
     }
+    // One possible function. Apparently, its not great
+    /*
     return 1 - pow(GetTensorValuePos(probabilities, digit), 2);
+    */
+
+
+    // Mean Squared Error
+    /*
+    double totalError = 0;
+
+    for (int i = 0; i<10; i++) {
+        if (i != digit) {
+            totalError += 0.5 * pow(0 - GetTensorValuePos(probabilities, i), 2);
+        }
+    }
+    totalError += 0.5 * pow(1 - GetTensorValuePos(probabilities, digit), 2);
+
+    return totalError;
+    */
+
+
+    // Cross Entropy (Apparently this is the best method for classification tasks like mnist)
+
+    double oneHotVector[MNIST_DIGIT_COUNT] = { 0 };
+    oneHotVector[digit] = 1;
+
+    const double epsilon = 1e-15;
+    double prob = GetTensorValuePos(probabilities, digit);
+    prob = fmax(prob, epsilon);  // Ensure prob >= epsilon
+
+    for (int i = 0; i < MNIST_DIGIT_COUNT; i++) {
+        double gradient = GetTensorValues(probabilities)[i] - oneHotVector[i];
+        // clamp gradients to prevent explosion
+        gradient = fmax(-10.0, fmin(10.0, gradient));
+        GetTensorValues(outputGradient)[i] = gradient;
+    }
+
+    return -1.0 * log(prob); //return loss value. not really necessary
 }
 
 void FreeMnistDigit(MnistDigit *d) {
@@ -71,19 +108,5 @@ void FreeMnistDigit(MnistDigit *d) {
 }
 
 void PrintMnistDigit(MnistDigit *d) {
-    /*
-    printf("\n\n/- digit: %d -------------------------------------------------------------------------\\\n", d->digit);
-
-    for (int i = 0; i<MNIST_DIGIT_SIDE_LEN; i++) {
-        printf("|");
-        for (int j = 0; j<MNIST_DIGIT_SIDE_LEN; j++) {
-            char c = CharShader((unsigned char)GetMatrixValueRowCol(d->pixels, i, j));
-            printf("%c%c%c", c, c, c);
-        }
-        printf("|\n");
-    }
-
-    printf("\\------------------------------------------------------------------------------------/\n");
-    */
     ShadeMatrix(d->pixels);
 }

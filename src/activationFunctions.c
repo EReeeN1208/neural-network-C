@@ -21,14 +21,15 @@ double LogisticSigmoid(double x) {
 }
 
 double Tanh(double x) {
-    return (exp(x) - exp(-x)) / (exp(x) + exp (-x));
+    //return (exp(x) - exp(-x)) / (exp(x) + exp (-x));
+    return tanh(x);
 }
 
 double Relu(double x) {
     return x >= 0 ? x : 0;
 }
 double LeakyRelu(double x) {
-    return x >= 0 ? x : 0.1 * x;
+    return x >= 0 ? x : LEAK_COEFFICIENT * x;
 }
 /*
 double ParametricLeakyRelu(double x, double a) {
@@ -36,9 +37,29 @@ double ParametricLeakyRelu(double x, double a) {
 }
 */
 
+double IdentityPrime(double x) {
+    return 1;
+}
+double BinaryStepPrime(double x) {
+    return 0;
+}
+double LogisticSigmoidPrime(double x) {
+    double a = LogisticSigmoid(x);
+    return (1-a)*a;
+}
+double TanhPrime(double x) {
+    return 1 - pow(Tanh(x), 2);
+}
+double ReluPrime(double x) {
+    return x > 0 ? 1 : 0;
+}
+double LeakyReluPrime(double x) {
+    return x > 0 ? 1 : LEAK_COEFFICIENT;
+}
+
 Matrix* ActivateMatrix(Matrix *m, double (*aFunc)(double)) {
     Matrix *mResult = NewEmptyMatrix(m->r, m->c);
-    const unsigned int size = m->r * m->r;
+    const unsigned int size = m->r * m->c;
 
     for (int i = 0; i < size; i++) {
         mResult->values[i] = aFunc(m->values[i]);
