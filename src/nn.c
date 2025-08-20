@@ -845,11 +845,14 @@ void TrainNetwork(NeuralNetwork *nNet, CSVFile *csvTrain, double (*lossFunction)
     if (trainingSteps == 0) {
         trainingSteps = csvTrain->rows;
     }
+    if (trainingSteps>csvTrain->rows) {
+        trainingSteps = csvTrain->rows;
+    }
 
     MnistDigit *mnistDigit = NewMnistDigit();
     RewindCSV(csvTrain);
 
-    for (int i = 0; i<nNet->trainingRounds; i++) {
+    for (int i = 0; i<trainingSteps; i++) {
         SkipLine(csvTrain);
         for (int j = 0; j<nNet->maxRoundSteps; j++) {
             ReadDigitFromCSV(csvTrain, mnistDigit);
