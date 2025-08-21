@@ -26,6 +26,7 @@
 //Non-Parameterised layers
 #define FLATTENING_LAYER 6
 #define SOFTMAX_LAYER 7
+#define RESHAPE_LAYER 8 //general name, but converts a 2d matrix into a 3d matrix
 
 
 //Neural Network Stages
@@ -54,6 +55,7 @@ typedef struct {
     unsigned int kernelSize;
     Matrix **kernels;
     Matrix **kernelGradients;
+    Vector *kernelBiases;
 } ConvolutionLayer;
 
 
@@ -86,6 +88,10 @@ typedef struct {
 
 } SoftMaxLayer;
 
+typedef struct {
+
+} ReshapeLayer;
+
 
 typedef struct {
     unsigned int uType;
@@ -100,6 +106,7 @@ typedef struct {
         PoolingLayer *poolingLayer;
         FlatteningLayer *flatteningLayer;
         SoftMaxLayer *softMaxLayer;
+        ReshapeLayer *reshapeLayer;
     };
     Tensor *computedValues;
     Tensor *computedValueGradients;
@@ -149,6 +156,9 @@ void FreeFlatteningLayer(Layer *layer);
 
 Layer* NewSoftMaxLayer(void);
 void FreeSoftMaxLayer(Layer *layer);
+
+Layer* NewReshapeLayer(void);
+void FreeReshapeLayer(Layer *layer);
 
 void FreeLayer(Layer *layer);
 void PrintLayerInfo(Layer *layer);

@@ -86,14 +86,14 @@ Vector* VectorMatrixMultiply(Matrix *m, Vector *v);
 Matrix* NewMatrixSum(Matrix *m1, Matrix *m2);
 Vector* NewVectorSum(Vector *v1, Vector *v2);
 void AddVector(Vector *vDest, Vector *vToAdd); // Adds vToAdd to vDest. vDest is modified. vToAdd is not
+void AddMatrix(Matrix *mDest, Matrix *mToAdd); // Adds vToAdd to vDest. vDest is modified. vToAdd is not
+void AddDoubleToVector(Vector *vDest, double d);
+void AddDoubleToMatrix(Matrix *mDest, double d);
 Matrix* TransposeMatrix(Matrix *m);
 
 void ScaleVectorDouble(Vector *v, double s);
-void ScaleVectorInt(Vector *v, int s);
 void ScaleMatrixDouble(Matrix *m, double s);
-void ScaleMatrixInt(Matrix *m, int s);
 void ScaleMatrix3dDouble(Matrix3d *m3d, double s);
-void ScaleMatrix3dInt(Matrix3d *m3d, int s);
 
 double GetVectorValue(Vector *v, unsigned int pos);
 void SetVectorValue(Vector *v, unsigned int pos, double value);
@@ -108,6 +108,7 @@ double GetMatrix3DValueDepthRowCol(Matrix3d *m3d, unsigned int depth, unsigned i
 double GetMatrix3DValuePos(Matrix3d *m3d, unsigned int pos);
 void SetMatrix3DValueDepthRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c, double value);
 void SetMatrix3DValuePos(Matrix3d *m3d, unsigned int pos, double value);
+void AddDoubleToMatrix3dDepthRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c, double valueToAdd);
 
 Matrix* ConvolveMatrix(Matrix *image, Matrix *kernel);
 Vector* FlattenMatrix(Matrix *m); // NOTE: Will reassign the pointer pointing the matrix's values to the vector and free the old matrix
@@ -126,6 +127,7 @@ Tensor* NewTensorCloneMatrix3d(Matrix3d* m3d);
 
 Tensor* CloneTensorEmpty(Tensor *t);
 void CopyTensorValues(Tensor *tDst, Tensor *tSrc, _Bool checkTensorType); // Will check to make sure the sizes and types of tensors match
+void ZeroTensorValues(Tensor *t);
 
 double* GetTensorValues(Tensor *t);
 double GetTensorValuePos(Tensor *t, unsigned int pos);

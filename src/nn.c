@@ -51,6 +51,7 @@ Layer* NewConvolutionLayer(unsigned int kernelCount, unsigned int kernelSize) {
     layer->convolutionLayer->kernelSize = kernelSize;
     layer->convolutionLayer->kernels = malloc(sizeof(Matrix*) * kernelCount);
     layer->convolutionLayer->kernelGradients = malloc(sizeof(Matrix*) * kernelCount);
+    layer->convolutionLayer->kernelBiases = NewFilledVector(kernelCount, 0);
     for (int i = 0; i<kernelCount; i++) {
         layer->convolutionLayer->kernels[i] = NewHeRandomMatrix(kernelSize, kernelSize);
         layer->convolutionLayer->kernelGradients[i] = NewFilledMatrix(kernelSize, kernelSize, 0);
@@ -66,6 +67,7 @@ void FreeConvolutionLayer(Layer *layer) {
         FreeMatrix(layer->convolutionLayer->kernels[i]);
         FreeMatrix(layer->convolutionLayer->kernelGradients[i]);
     }
+    FreeVector(layer->convolutionLayer->kernelBiases);
     free(layer->convolutionLayer);
     free(layer);
 }
@@ -180,6 +182,21 @@ void FreeSoftMaxLayer(Layer *layer) {
     free(layer);
 }
 
+Layer* NewReshapeLayer(void) {
+    Layer *layer = malloc(sizeof(Layer));
+    layer->uType = RESHAPE_LAYER;
+    layer->reshapeLayer = malloc(sizeof(ReshapeLayer));
+
+    layer->computedValues = NULL;
+    layer->computedValueGradients = NULL;
+
+    return layer;
+}
+void FreeReshapeLayer(Layer *layer) {
+    free(layer->reshapeLayer);
+    free(layer);
+}
+
 
 void FreeLayer(Layer *layer) {
     if (!layer) {
@@ -226,6 +243,10 @@ void FreeLayer(Layer *layer) {
         }
         case SOFTMAX_LAYER: {
             FreeSoftMaxLayer(layer);
+            break;
+        }
+        case RESHAPE_LAYER: {
+            FreeReshapeLayer(layer);
             break;
         }
 
@@ -275,6 +296,10 @@ void PrintLayerInfo(Layer *layer) {
             strcpy(layerName, "Softmax Layer");
             break;
         }
+        case RESHAPE_LAYER: {
+            strcpy(layerName, "Reshape Layer");
+            break;
+        }
         default: {
             fprintf(stderr, "Error: tried to access utype '%d' for a layer in PrintLayerInfo().", layer->uType);
             exit(EXIT_FAILURE_CODE);
@@ -303,13 +328,6 @@ void InitIOLayerTensor(Layer *layer) {
     }
 
     layer->computedValueGradients = CloneTensorEmpty(layer->computedValues);
-
-    return;
-
-    error: {
-        fprintf(stderr, "Error during IO Layer tensor initialisation");
-        exit(EXIT_FAILURE_CODE);
-    }
 } //InitIOLayerTensor()
 
 void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
@@ -324,21 +342,14 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
             break;
         }
         case CONVOLUTION_LAYER: {
-
-            if (previousLayer->computedValues->uType == VECTOR) {
+            if (previousLayer->computedValues->uType != MATRIX3D) {
                 goto error;
             }
+
             unsigned int padding = layer->convolutionLayer->kernelSize - 1;
-            unsigned int depth = 1;
-            unsigned int r, c;
-            if (previousLayer->computedValues->uType == MATRIX3D) {
-                depth = previousLayer->computedValues->matrix3d->depth;
-                r = previousLayer->computedValues->matrix3d->r;
-                c = previousLayer->computedValues->matrix3d->c;
-            } else {
-                r = previousLayer->computedValues->matrix2d->r;
-                c = previousLayer->computedValues->matrix2d->c;
-            }
+            unsigned int depth = previousLayer->computedValues->matrix3d->depth;
+            unsigned int r = previousLayer->computedValues->matrix3d->r;
+            unsigned int c = previousLayer->computedValues->matrix3d->c;
 
             layer->computedValues = NewTensorEncapsulateMatrix3d(NewFilledMatrix3d(depth * layer->convolutionLayer->kernelCount, r-padding, c-padding, 0));
 
@@ -351,43 +362,26 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
             break;
         }
         case POOLING_LAYER: {
-            if (previousLayer->computedValues->uType == VECTOR) {
+            if (previousLayer->computedValues->uType != MATRIX3D) {
                 goto error;
             }
 
             const unsigned int poolSize = layer->poolingLayer->poolSize;
 
-            switch (previousLayer->computedValues->uType) {
-                case MATRIX2D: {
-                    if (previousLayer->computedValues->matrix2d->r % poolSize != 0 || previousLayer->computedValues->matrix2d->c % poolSize != 0) {
-                        fprintf(stderr, "Error: invalid pool size %d for matrix rxc. InitHiddenLayerTensor().", poolSize);
-                        exit(EXIT_FAILURE_CODE);
-                    }
-
-                    layer->computedValues = NewTensorEncapsulateMatrix(NewFilledMatrix(previousLayer->computedValues->matrix2d->r / poolSize, previousLayer->computedValues->matrix2d->c / poolSize, 0));
-
-                    break;
-                }
-                case MATRIX3D: {
-                    if (previousLayer->computedValues->matrix3d->r % poolSize != 0 || previousLayer->computedValues->matrix3d->c % poolSize != 0) {
-                        fprintf(stderr, "Error: invalid pool size %d for matrix rxc. InitHiddenLayerTensor().", layer->poolingLayer->poolSize);
-                        exit(EXIT_FAILURE_CODE);
-                    }
-
-                    layer->computedValues =NewTensorEncapsulateMatrix3d(NewFilledMatrix3d(previousLayer->computedValues->matrix3d->depth, previousLayer->computedValues->matrix3d->r / poolSize, previousLayer->computedValues->matrix3d->c / poolSize, 0));
-
-                    break;
-                }
-                default: {
-                    fprintf(stderr, "Error: tried to access utype '%d' for a tensor InitHiddenLayerTensor().", previousLayer->computedValues->uType);
-                    exit(EXIT_FAILURE_CODE);
-                }
+            if (previousLayer->computedValues->matrix3d->r % poolSize != 0 || previousLayer->computedValues->matrix3d->c % poolSize != 0) {
+                fprintf(stderr, "Error: invalid pool size %d for matrix rxc. InitHiddenLayerTensor().", layer->poolingLayer->poolSize);
+                exit(EXIT_FAILURE_CODE);
             }
+
+            layer->computedValues = NewTensorEncapsulateMatrix3d(NewFilledMatrix3d(previousLayer->computedValues->matrix3d->depth, previousLayer->computedValues->matrix3d->r / poolSize, previousLayer->computedValues->matrix3d->c / poolSize, 0));
 
             break;
         }
 
         case FLATTENING_LAYER: {
+            if (previousLayer->computedValues->uType == VECTOR) {
+                goto error;
+            }
             layer->computedValues = NewTensorEncapsulateVector(NewFilledVector(previousLayer->computedValues->size, 0));
 
             break;
@@ -397,9 +391,41 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
 
             break;
         }
+        case RESHAPE_LAYER: {
+            // uncomment to allow support for 3d matrices to also be reshaped back into 3d matrices
+            /*
+            if (previousLayer->computedValues->uType == VECTOR) {
+                goto error;
+            }
+
+            unsigned int depth = 1;
+            unsigned int r, c;
+            if (previousLayer->computedValues->uType == MATRIX3D) {
+                depth = previousLayer->computedValues->matrix3d->depth;
+                r = previousLayer->computedValues->matrix3d->r;
+                c = previousLayer->computedValues->matrix3d->c;
+            } else {
+                r = previousLayer->computedValues->matrix2d->r;
+                c = previousLayer->computedValues->matrix2d->c;
+            }
+
+            Matrix3d *m3d = NewEmptyMatrix3d(depth, r, c);
+
+            layer->computedValues = NewTensorEncapsulateMatrix3d(m3d);
+
+            break;
+            */
+            if (previousLayer->computedValues->uType != MATRIX2D) {
+                goto error;
+            }
+            Matrix3d *m3d = NewEmptyMatrix3d(1, previousLayer->computedValues->matrix2d->r, previousLayer->computedValues->matrix2d->c);
+
+            layer->computedValues = NewTensorEncapsulateMatrix3d(m3d);
+            break;
+        }
 
         default: {
-            fprintf(stderr, "Error: tried to access utype '%d' for a layer in InitHiddenLayerTensor().", layer->uType);
+            fprintf(stderr, "Error: tried to access utype '%d' for a layer in InitHiddenLayerTensor()", layer->uType);
             exit(EXIT_FAILURE_CODE);
         }
     }
@@ -409,7 +435,11 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
     return;
 
     error: {
-        fprintf(stderr, "Error: invalid layer sequence. Prev: %d, Current: %d", previousLayer->uType, layer->uType);
+        if (layer->uType == CONVOLUTION_LAYER || layer->uType == POOLING_LAYER) {
+            fprintf(stderr, "Error: Convolution and pooling layers only support layers with 3d matrices as inputs.\nUse a reshape layer to convert a 2d layer into a 3d layer. ComputeHiddenLayerGradients()");
+        } else {
+            fprintf(stderr, "Error: invalid layer sequence. Prev: %d, Current: %d", previousLayer->uType, layer->uType);
+        }
         exit(EXIT_FAILURE_CODE);
     }
 } //InitHiddenLayerTensor()
@@ -418,9 +448,11 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
 void ComputeLayerValues(Layer *previousLayer, Layer *layer) {
     switch (layer->uType) {
         case LINEAR_LAYER: {
+            /* Should already be checked during tensor init
             if (previousLayer->computedValues->uType != VECTOR) {
                 goto error;
             }
+            */
 
             Vector *v = VectorMatrixMultiply(layer->linearLayer->weights, previousLayer->computedValues->vector);
 
@@ -438,58 +470,47 @@ void ComputeLayerValues(Layer *previousLayer, Layer *layer) {
             break;
         }
         case CONVOLUTION_LAYER: {
-            if (previousLayer->computedValues->uType == VECTOR) {
+            /* Should already be checked during tensor init
+            if (previousLayer->computedValues->uType != MATRIX3D) {
                 goto error;
             }
+            */
 
-            switch (previousLayer->computedValues->uType) {
-                case MATRIX2D: {
+            for (unsigned int i = 0; i<layer->convolutionLayer->kernelCount; i++) {//Iterate over each kernel/filter
 
-                    for (unsigned int i = 0; i<layer->convolutionLayer->kernelCount; i++) {//Iterate over each kernel/filter
+                for (unsigned int j = 0; j<previousLayer->computedValues->matrix3d->depth; j++) {//Iterate each kernel/filter over each 2d matrix in the previous layer
 
-                        Matrix *mConvolved = ConvolveMatrix(previousLayer->computedValues->matrix2d, layer->convolutionLayer->kernels[i]);
+                    Matrix *m = Get2dSliceMatrix3d(previousLayer->computedValues->matrix3d, j); // don't need to free
 
-                        Set2dSliceMatrix3d(layer->computedValues->matrix3d, mConvolved, i);
+                    Matrix *mConvolved = ConvolveMatrix(m, layer->convolutionLayer->kernels[i]); // do need to free
 
-                        FreeMatrix(mConvolved);
-                    }
-                    break;
-                }
-                case MATRIX3D: {
+                    AddDoubleToMatrix(mConvolved, GetVectorValue(layer->convolutionLayer->kernelBiases, i));
 
-                    for (unsigned int i = 0; i<layer->convolutionLayer->kernelCount; i++) {//Iterate over each kernel/filter
+                    Set2dSliceMatrix3d(layer->computedValues->matrix3d, mConvolved, i*previousLayer->computedValues->matrix3d->depth + j);
 
-
-                        for (unsigned int j = 0; j<previousLayer->computedValues->matrix3d->depth; j++) {//Iterate each kernel/filter over each 2d matrix in the previous layer
-
-                            Matrix *m = Get2dSliceMatrix3d(previousLayer->computedValues->matrix3d, j); // don't need to free
-
-                            Matrix *mConvolved = ConvolveMatrix(m, layer->convolutionLayer->kernels[i]); // do need to free
-
-                            Set2dSliceMatrix3d(layer->computedValues->matrix3d, mConvolved, i*layer->convolutionLayer->kernelCount + j);
-
-                            FreeMatrix(mConvolved);
-                        }
-                    }
-                    break;
+                    FreeMatrix(mConvolved);
                 }
             }
             break;
         }
 
         case VECTOR_LAYER: {
+            /* Should already be checked during tensor init
             if (previousLayer->computedValues->uType != VECTOR) {
                 goto error;
             }
+            */
 
             CopyTensorValues(layer->computedValues, previousLayer->computedValues, true);
 
             break;
         }
         case MATRIX_LAYER: {
+            /* Should already be checked during tensor init
             if (previousLayer->computedValues->uType != MATRIX2D) {
                 goto error;
             }
+            */
 
             CopyTensorValues(layer->computedValues, previousLayer->computedValues, true);
 
@@ -509,39 +530,21 @@ void ComputeLayerValues(Layer *previousLayer, Layer *layer) {
             break;
         }
         case POOLING_LAYER: {
-            if (previousLayer->computedValues->uType == VECTOR) {
+            /* Should already be checked during tensor init
+            if (previousLayer->computedValues->uType == MATRIX3D) {
                 goto error;
             }
+            */
 
             const unsigned int poolSize = layer->poolingLayer->poolSize;
 
-            switch (previousLayer->computedValues->uType) {
-                case MATRIX2D: {
-
-                    switch (layer->poolingLayer->poolingMethod) {
-                        case MAX_POOLING: {
-                            MaxPoolMatrix(layer->computedValues->matrix2d, previousLayer->computedValues->matrix2d, poolSize);
-                            break;
-                        }
-                        case AVERAGE_POOLING: {
-                            AveragePoolMatrix(layer->computedValues->matrix2d, previousLayer->computedValues->matrix2d, poolSize);
-                            break;
-                        }
-                    }
+            switch (layer->poolingLayer->poolingMethod) {
+                case MAX_POOLING: {
+                    MaxPoolMatrix3d(layer->computedValues->matrix3d, previousLayer->computedValues->matrix3d, poolSize);
                     break;
                 }
-                case MATRIX3D: {
-
-                    switch (layer->poolingLayer->poolingMethod) {
-                        case MAX_POOLING: {
-                            MaxPoolMatrix3d(layer->computedValues->matrix3d, previousLayer->computedValues->matrix3d, poolSize);
-                            break;
-                        }
-                        case AVERAGE_POOLING: {
-                            AveragePoolMatrix3d(layer->computedValues->matrix3d, previousLayer->computedValues->matrix3d, poolSize);
-                            break;
-                        }
-                    }
+                case AVERAGE_POOLING: {
+                    AveragePoolMatrix3d(layer->computedValues->matrix3d, previousLayer->computedValues->matrix3d, poolSize);
                     break;
                 }
             }
@@ -571,24 +574,30 @@ void ComputeLayerValues(Layer *previousLayer, Layer *layer) {
             break;
         }
 
+        case RESHAPE_LAYER: {
+            Set2dSliceMatrix3d(layer->computedValues->matrix3d, previousLayer->computedValues->matrix2d, 0);
+            break;
+        }
+
         default: {
             fprintf(stderr, "Error: tried to access utype '%d' for a layer in ComputeLayerValues().", layer->uType);
             exit(EXIT_FAILURE_CODE);
         }
     }
+    /*
     return;
 
     error: {
         fprintf(stderr, "Error: invalid layer sequence. Prev: %d, Current: %d", previousLayer->uType, layer->uType);
         exit(EXIT_FAILURE_CODE);
     }
+    */
 } // InitHiddenLayerTensor()
 
 void ComputeHiddenLayerGradients(Layer *previousLayer, Layer *layer, Layer *proceedingLayer, double lr) {
 
     switch (layer->uType) {
         case LINEAR_LAYER: {
-
             CopyTensorValues(layer->computedValueGradients, proceedingLayer->computedValueGradients, false);
 
 
@@ -624,21 +633,192 @@ void ComputeHiddenLayerGradients(Layer *previousLayer, Layer *layer, Layer *proc
             break;
         }
         case CONVOLUTION_LAYER: {
-            fprintf(stderr, "Error: Convolution and Pooling layer gradients not implemented yet\n");
-            exit(EXIT_FAILURE_CODE);
+
+            //this block is commented the hell out of because it was really complex the program. I left them in because maybe they will be helpful for someone
+
+            unsigned int kernelSize = layer->convolutionLayer->kernelSize;
+            unsigned int kernelCount = layer->convolutionLayer->kernelCount;
+            unsigned int inputMatrixCount = previousLayer->computedValues->matrix3d->depth;
+
+            unsigned int outputR = layer->computedValues->matrix3d->r;
+            unsigned int outputC = layer->computedValues->matrix3d->c;
+
+            for (int i = 0; i<kernelCount; i++) {
+                Matrix *mWeightLosses = layer->convolutionLayer->kernelGradients[i];
+                double *values = mWeightLosses->values;
+
+                double biasGradient = 0;
+
+                for (int r = 0; r<outputR; r++) {
+                    for (int c = 0; c<outputC; c++) {
+                        for (int d = 0; d<inputMatrixCount; d++) {
+                            for (int j = 0; j<kernelSize*kernelSize; j++) {
+                                values[j] += GetMatrix3DValueDepthRowCol(previousLayer->computedValues->matrix3d, d, r+(j/kernelSize), c+(j%kernelSize));
+                            }
+                            biasGradient += GetMatrix3DValueDepthRowCol(layer->computedValueGradients->matrix3d, d, r, c);
+                        }
+                    }
+                }
+                layer->convolutionLayer->kernelBiases->values[i] -= biasGradient*lr;
+            }
+
+            ZeroTensorValues(previousLayer->computedValueGradients);
+
+            //iterate over each output pixel
+            for (int d = 0; d<layer->computedValues->matrix3d->depth; d++) {
+                for (int r = 0; r<layer->computedValues->matrix3d->r; r++) {
+                    for (int c = 0; c<layer->computedValues->matrix3d->c; c++) {
+                        //iterate over each output pixel. For each output pixel, we need to multiply:
+                        //the kernel weight that touched every input pixel that affected the output pixel and the upstream gradient for that output pixel.
+                        //add that to the gradient of that input pixel
+
+                        //upstream gradient at that output pixel.
+                        double upstreamGradient = GetMatrix3DValueDepthRowCol(layer->computedValueGradients->matrix3d, d, r, c);
+
+                        /*
+                        for (int i = 0; i<layer->convolutionLayer->kernelCount; i++) {
+                            for (int j = 0; j<kernelSize*kernelSize; j++) {
+                                //iterating over each
+                                GetMatrix3DValueDepthRowCol(previousLayer->computedValues->matrix3d, i*layer->convolutionLayer->kernelCount + d, r+(j/kernelSize), c+(j%kernelSize));
+                            }
+                        }*/
+
+                        //for each output pixel, we need find the kernel that affected that layer, and then go b
+                        unsigned int i = d/kernelCount; //i is the index of kernel used for this output layer
+                        for (int j = 0; j<kernelSize*kernelSize; j++) {//now in this loop, we can iterate over pixels in the input layer like a convolution filter. kernelSize^2 pixels for each loop run.
+                            //iterating over conv filter
+                            AddDoubleToMatrix3dDepthRowCol(previousLayer->computedValueGradients->matrix3d, d/kernelCount, r+(j/kernelSize), c+(j%kernelSize), upstreamGradient * GetMatrixValuePos(layer->convolutionLayer->kernels[i], j));
+                        }
+                    }
+                }
+            }
+
+            for (int i = 0; i<kernelCount; i++) { //update weights at the end
+                Matrix *mWeightLosses = layer->convolutionLayer->kernelGradients[i];
+                Matrix *mWeights = layer->convolutionLayer->kernels[i];
+
+                ScaleMatrixDouble(mWeightLosses, -lr);
+                AddMatrix(mWeights, mWeightLosses);
+            }
+
             break;
         }
         case ELEMENTWISE_LAYER: {
 
+            if (layer->computedValueGradients->size != previousLayer->computedValueGradients->size) {
+                printf("amogus");
+            }
+
             for (int i = 0; i < layer->computedValueGradients->size; i++) {
-                double gradient = GetTensorValues(proceedingLayer->computedValueGradients)[i] * layer->elementWiseLayer->gradientFunction(GetTensorValues(previousLayer->computedValues)[i]);
+                double gradient = GetTensorValues(layer->computedValueGradients)[i] * layer->elementWiseLayer->gradientFunction(GetTensorValues(previousLayer->computedValues)[i]);
                 GetTensorValues(previousLayer->computedValueGradients)[i] = gradient;
             }
             break;
         }
         case POOLING_LAYER: {
-            fprintf(stderr, "Error: Convolution and Pooling layer gradients not implemented yet\n");
-            exit(EXIT_FAILURE_CODE);
+            const unsigned int poolSize = layer->poolingLayer->poolSize;
+            const double poolSizeSquared = poolSize * poolSize;
+            switch (layer->poolingLayer->poolingMethod) {
+                case MAX_POOLING: {
+                    ZeroTensorValues(previousLayer->computedValueGradients);
+                    for (int d = 0; d<layer->computedValues->matrix3d->depth; d++) {
+                        for (int i = 0; i<layer->computedValues->matrix3d->r; i++) {
+                            for (int j = 0; j<layer->computedValues->matrix3d->c; j++) {
+                                double max = GetMatrix3DValueDepthRowCol(layer->computedValues->matrix3d, d, i, j);
+                                for (int r = 0; r<poolSize; r++) {
+                                    for (int c = 0; c<poolSize; c++) {
+                                        if (GetMatrix3DValueDepthRowCol(previousLayer->computedValues->matrix3d, d, i*poolSize + r, j*poolSize+c) == max) {
+                                            SetMatrix3DValueDepthRowCol(previousLayer->computedValueGradients->matrix3d, d, i*poolSize + r, j*poolSize+c, GetMatrix3DValueDepthRowCol(layer->computedValueGradients->matrix3d, d, i, j));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                case AVERAGE_POOLING: {
+                    for (int d = 0; d<previousLayer->computedValueGradients->matrix3d->depth; d++) {
+                        for (int i = 0; i<previousLayer->computedValueGradients->matrix3d->r; i++) {
+                            for (int j = 0; j<previousLayer->computedValueGradients->matrix3d->c; j++) {
+                                SetMatrix3DValueDepthRowCol(previousLayer->computedValueGradients->matrix3d, d, i, j, GetMatrix3DValueDepthRowCol(layer->computedValueGradients->matrix3d, d, i/poolSize, j/poolSize) / poolSizeSquared);
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+            break;
+
+            /*
+            switch (previousLayer->computedValues->uType) {
+                case MATRIX2D: {
+
+                    switch (layer->poolingLayer->poolingMethod) {
+
+                        case MAX_POOLING: {
+                            ZeroTensorValues(previousLayer->computedValueGradients);
+                            for (int i = 0; i<layer->computedValues->matrix2d->r; i++) {
+                                for (int j = 0; j<layer->computedValues->matrix2d->c; j++) {
+                                    double max = GetMatrixValueRowCol(layer->computedValues->matrix2d, i, j);
+                                    for (int r = 0; r<poolSize; r++) {
+                                        for (int c = 0; c<poolSize; c++) {
+                                            if (GetMatrixValueRowCol(previousLayer->computedValues->matrix2d, i*poolSize + r, j*poolSize+c) == max) {
+                                                SetMatrixValueRowCol(previousLayer->computedValueGradients->matrix2d, i*poolSize + r, j*poolSize+c, GetMatrixValueRowCol(layer->computedValueGradients->matrix2d, i, j));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                        case AVERAGE_POOLING: {
+                            for (int i = 0; i<previousLayer->computedValueGradients->matrix2d->r; i++) {
+                                for (int j = 0; j<previousLayer->computedValueGradients->matrix2d->c; j++) {
+                                    SetMatrixValueRowCol(previousLayer->computedValueGradients->matrix2d, i, j, GetMatrixValueRowCol(layer->computedValueGradients->matrix2d, i/poolSize, j/poolSize) / poolSizeSquared);
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case MATRIX3D: {
+
+                    switch (layer->poolingLayer->poolingMethod) {
+                        case MAX_POOLING: {
+                            ZeroTensorValues(previousLayer->computedValueGradients);
+                            for (int d = 0; d<layer->computedValues->matrix3d->depth; d++) {
+                                for (int i = 0; i<layer->computedValues->matrix3d->r; i++) {
+                                    for (int j = 0; j<layer->computedValues->matrix3d->c; j++) {
+                                        double max = GetMatrix3DValueDepthRowCol(layer->computedValues->matrix3d, d, i, j);
+                                        for (int r = 0; r<poolSize; r++) {
+                                            for (int c = 0; c<poolSize; c++) {
+                                                if (GetMatrix3DValueDepthRowCol(previousLayer->computedValues->matrix3d, d, i*poolSize + r, j*poolSize+c) == max) {
+                                                    SetMatrix3DValueDepthRowCol(previousLayer->computedValueGradients->matrix3d, d, i*poolSize + r, j*poolSize+c, GetMatrix3DValueDepthRowCol(layer->computedValueGradients->matrix3d, d, i, j));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                        case AVERAGE_POOLING: {
+                            for (int d = 0; d<previousLayer->computedValueGradients->matrix3d->depth; d++) {
+                                for (int i = 0; i<previousLayer->computedValueGradients->matrix3d->r; i++) {
+                                    for (int j = 0; j<previousLayer->computedValueGradients->matrix3d->c; j++) {
+                                        SetMatrix3DValueDepthRowCol(previousLayer->computedValueGradients->matrix3d, d, i, j, GetMatrix3DValueDepthRowCol(layer->computedValueGradients->matrix3d, d, i/poolSize, j/poolSize) / poolSizeSquared);
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+            */
             break;
         }
         case FLATTENING_LAYER: {
@@ -648,6 +828,10 @@ void ComputeHiddenLayerGradients(Layer *previousLayer, Layer *layer, Layer *proc
         }
         case SOFTMAX_LAYER: {
 
+            CopyTensorValues(previousLayer->computedValueGradients, layer->computedValueGradients, false);
+            break;
+        }
+        case RESHAPE_LAYER: {
             CopyTensorValues(previousLayer->computedValueGradients, layer->computedValueGradients, false);
             break;
         }
@@ -810,22 +994,24 @@ Tensor* RunNeuralNetwork(NeuralNetwork *nNet, Tensor *input) {
 }
 
 Tensor* NetworkTrainingStep(NeuralNetwork *nNet, Tensor *input, int expected, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected)) {
+    nNet->trainingStepCount++;
 
     Tensor *netOutput = RunNeuralNetwork(nNet, input); //don't free netOutput. just a reference
 
 
     double loss = lossFunction(netOutput, nNet->outputLayer->computedValueGradients, expected);
 
-    printf("\n===== Training Step %8d =====\n", nNet->trainingStepCount++);
-    printf("Actual: %d. Prediction: %d. Prediction Weight: %f\nOutput Vector: ", expected, GetTensorMaxIndex(netOutput), GetTensorValuePos(netOutput, GetTensorMaxIndex(netOutput)));
-    PrintVectorHorizontal(netOutput->vector);
-    printf("Loss: %f\n", loss);
-    printf("==================================\n\n");
-
+    if (nNet->trainingStepCount % 100 == 0) {
+        printf("\n===== Training Step %8d =====\n", nNet->trainingStepCount);
+        printf("Actual: %d. Prediction: %d. Prediction Weight: %f\nOutput Vector: ", expected, GetTensorMaxIndex(netOutput), GetTensorValuePos(netOutput, GetTensorMaxIndex(netOutput)));
+        PrintVectorHorizontal(netOutput->vector);
+        printf("Loss: %f\n", loss);
+        printf("==================================\n\n");
+    }
 
     ComputeIOLayerGradients(nNet->hiddenLayers[nNet->hiddenLayerCount-1], nNet->outputLayer);
 
-    for (int i = (int)nNet->hiddenLayerCount - 1; i >= 0; i--) {
+    for (int i = nNet->hiddenLayerCount - 1; i >= 0; i--) {
         Layer *currentLayer = nNet->hiddenLayers[i];
         Layer *previousLayer = (i == 0) ? nNet->inputLayer : nNet->hiddenLayers[i-1];
         Layer *nextLayer = (i == nNet->hiddenLayerCount - 1) ? nNet->outputLayer : nNet->hiddenLayers[i+1];
@@ -841,7 +1027,7 @@ void TrainNetwork(NeuralNetwork *nNet, CSVFile *csvTrain, double (*lossFunction)
         fprintf(stderr, "Error: Attempted to train un-finalized neural network (stage %d). Required stage: >= 2", nNet->stage);
         exit(EXIT_FAILURE_CODE);
     }
-    unsigned int trainingSteps = nNet->trainingStepCount;
+    unsigned int trainingSteps = nNet->maxRoundSteps;
     if (trainingSteps == 0) {
         trainingSteps = csvTrain->rows;
     }
@@ -852,9 +1038,9 @@ void TrainNetwork(NeuralNetwork *nNet, CSVFile *csvTrain, double (*lossFunction)
     MnistDigit *mnistDigit = NewMnistDigit();
     RewindCSV(csvTrain);
 
-    for (int i = 0; i<trainingSteps; i++) {
+    for (int i = 0; i<nNet->trainingRounds; i++) {
         SkipLine(csvTrain);
-        for (int j = 0; j<nNet->maxRoundSteps; j++) {
+        for (int j = 0; j<trainingSteps; j++) {
             ReadDigitFromCSV(csvTrain, mnistDigit);
 
             Tensor* inputTensor = NewTensorCloneMatrix(mnistDigit->pixels); //needs to be fred
@@ -898,7 +1084,7 @@ void TestNetwork(NeuralNetwork  *nNet, CSVFile *csvTest, double (*lossFunction)(
         FreeTensor(inputTensor); //maybe optimize this later?
     }
 
-    printf("\n========== Test Results: ==========\n", nNet->trainingStepCount++);
+    printf("\n========== Test Results: ==========\n");
     printf("Tested %d digits. Correct: %d, Incorrect: %d\n", correct + errors, correct, errors);
     printf("Total Accuracy: %.3f%%\n", 100.0 * (double)correct / ((double)correct + (double)errors));
     printf("===================================\n\n");
@@ -913,20 +1099,24 @@ int NeuralNetworkMain() {
     SetInputLayer(nNet, NewMatrixLayer(28, 28));
 
     // Convolution Network (Convolutional layers and pooling layers are not implemented yet)
-    /*
+
+    AddHiddenLayer(nNet, NewReshapeLayer());
     AddHiddenLayer(nNet, NewConvolutionLayer(8, 3));
     AddHiddenLayer(nNet, NewPoolingLayer(2, MAX_POOLING));
-    AddHiddenLayer(nNet, NewFlatteningLayer());
-    AddHiddenLayer(nNet, NewLinearLayer(500));
     AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
-    AddHiddenLayer(nNet, NewLinearLayer(100));
+    AddHiddenLayer(nNet, NewFlatteningLayer());
+    AddHiddenLayer(nNet, NewLinearLayer(512));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    AddHiddenLayer(nNet, NewLinearLayer(256));
     AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
     AddHiddenLayer(nNet, NewLinearLayer(10));
     AddHiddenLayer(nNet, NewSoftMaxLayer());
-    */
+
 
     // Non-Convolutional Network
-
+    /*
+    AddHiddenLayer(nNet, NewReshapeLayer());
+    AddHiddenLayer(nNet, NewPoolingLayer(2, AVERAGE_POOLING));
     AddHiddenLayer(nNet, NewFlatteningLayer());
     AddHiddenLayer(nNet, NewLinearLayer(512));
     AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
@@ -936,7 +1126,7 @@ int NeuralNetworkMain() {
     AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
     AddHiddenLayer(nNet, NewLinearLayer(10));
     AddHiddenLayer(nNet, NewSoftMaxLayer());
-
+    */
 
     SetOutputLayer(nNet, NewVectorLayer(10));
 
@@ -953,7 +1143,6 @@ int NeuralNetworkMain() {
         csvTrain = OpenCSVFile("../data/mnist_train.csv");
         csvTest = OpenCSVFile("../data/mnist_test.csv");
     }
-
 
     TrainNetwork(nNet, csvTrain, CalculateMnistLoss);
     PrintNeuralNetworkInfo(nNet);

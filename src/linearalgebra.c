@@ -199,7 +199,7 @@ void FreeMatrix3d(Matrix3d *m) {
 
 Matrix* Get2dSliceMatrix3d(Matrix3d *m3d, unsigned int slice) {
     if (slice >= m3d->depth) {
-        fprintf(stderr, "Attempted to access slice out of bounds. GetSliceMatrix3d()");
+        fprintf(stderr, "Attempted to access slice out of bounds. Get2dSliceMatrix3d()");
         exit(EXIT_FAILURE_CODE);
     }
 
@@ -213,10 +213,9 @@ Matrix* Get2dSliceMatrix3d(Matrix3d *m3d, unsigned int slice) {
 
 void Set2dSliceMatrix3d(Matrix3d *mDst, Matrix *mSrc, unsigned int slice) {
     if (slice >= mDst->depth) {
-        fprintf(stderr, "Attempted to access slice out of bounds. GetSliceMatrix3d()");
+        fprintf(stderr, "Attempted to access slice out of bounds. %d, %d. Set2dSliceMatrix3d()", slice, mDst->depth);
         exit(EXIT_FAILURE_CODE);
     }
-
     unsigned int sliceSize = mDst->r * mDst->c;
 
     memcpy(mDst->values+sliceSize*slice, mSrc->values, sizeof(double) * sliceSize);
@@ -272,7 +271,7 @@ Matrix* NewMatrixSum(Matrix *m1, Matrix *m2) {
         fprintf(stderr, "Matrices not same size for addition. NewMatrixSum()");
         exit(EXIT_FAILURE_CODE);
     }
-    int size = m1->r * m1->c;
+    unsigned int size = m1->r * m1->c;
 
     Matrix *mResult = NewEmptyMatrix(m1->r, m1->c);
 
@@ -308,6 +307,32 @@ void AddVector(Vector *vDest/*changes*/, Vector *vToAdd/*remains unchanged*/) {
 
 }
 
+void AddMatrix(Matrix *mDest, Matrix *mToAdd) {
+    if (mDest->r != mToAdd->r || mDest->c != mToAdd->c) {
+        fprintf(stderr, "Matrices not same size for addition. AddMatrix()");
+        exit(EXIT_FAILURE_CODE);
+    }
+
+    unsigned int size = mDest->r * mDest->c;
+
+    for (int i = 0; i<size; i++) {
+        mDest->values[i] += mToAdd->values[i];
+    }
+}
+
+void AddDoubleToVector(Vector *vDest, double d) {
+    for (int i = 0; i < vDest->size; i++) {
+        vDest->values[i] += d;
+    }
+}
+void AddDoubleToMatrix(Matrix *mDest, double d) {
+    unsigned int size = mDest->r * mDest->c;
+
+    for (int i = 0; i<size; i++) {
+        mDest->values[i] += d;
+    }
+}
+
 Matrix* TransposeMatrix(Matrix *m) {
     unsigned int size = m->r * m->c;
 
@@ -331,11 +356,6 @@ void ScaleVectorDouble(Vector *v, double s) {
         v->values[i] = v->values[i] * s;
     }
 }
-void ScaleVectorInt(Vector *v, int s) {
-    for (int i = 0; i < v->size; i++) {
-        v->values[i] = v->values[i] * s;
-    }
-}
 void ScaleMatrixDouble(Matrix *m, double s) {
     unsigned int size = m->r * m->c;
 
@@ -343,21 +363,7 @@ void ScaleMatrixDouble(Matrix *m, double s) {
         m->values[i] = m->values[i] * s;
     }
 }
-void ScaleMatrixInt(Matrix *m, int s)  {
-    unsigned int size = m->r * m->c;
-
-    for (int i = 0; i < size; i++) {
-        m->values[i] = m->values[i] * s;
-    }
-}
 void ScaleMatrix3dDouble(Matrix3d *m3d, double s) {
-    unsigned int size = m3d->depth * m3d->r * m3d->c;
-
-    for (int i = 0; i < size; i++) {
-        m3d->values[i] = m3d->values[i] * s;
-    }
-}
-void ScaleMatrix3dInt(Matrix3d *m3d, int s) {
     unsigned int size = m3d->depth * m3d->r * m3d->c;
 
     for (int i = 0; i < size; i++) {
@@ -465,6 +471,14 @@ void SetMatrix3DValuePos(Matrix3d *m3d, unsigned int pos, double value) {
         exit(EXIT_FAILURE_CODE);
     }
     m3d->values[pos] = value;
+}
+
+void AddDoubleToMatrix3dDepthRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c, double valueToAdd) {
+    if (depth >= m3d->depth || r >= m3d->r || c >= m3d->c) {
+        fprintf(stderr, "Error during AddDoubleToMatrix3dDepthRowCol Matrix size: %dx%dx%d, Tried to set: %dx%dx%d", m3d->depth, m3d->r, m3d->c, depth, r, c);
+        exit(EXIT_FAILURE_CODE);
+    }
+    m3d->values[depth*m3d->r*m3d->c + r*m3d->c + c] += valueToAdd;
 }
 
 
@@ -627,6 +641,30 @@ void CopyTensorValues(Tensor *tDst, Tensor *tSrc, _Bool checkTensorType) {
     }
 
     memcpy(GetTensorValues(tDst), GetTensorValues(tSrc), sizeof(double) * tSrc->size);
+}
+
+void ZeroTensorValues(Tensor *t) {
+    switch (t->uType) {
+        case VECTOR: {
+            free(t->vector->values);
+            t->vector->values = calloc(t->size, sizeof(double));
+            break;
+        }
+        case MATRIX2D: {
+            free(t->matrix2d->values);
+            t->matrix2d->values = calloc(t->size, sizeof(double));
+            break;
+        }
+        case MATRIX3D: {
+            free(t->matrix3d->values);
+            t->matrix3d->values = calloc(t->size, sizeof(double));
+            break;
+        }
+        default: {
+            fprintf(stderr, "Error: tried to access utype '%d' for a tensor ZeroTensorValues().", t->uType);
+            exit(EXIT_FAILURE_CODE);
+        }
+    }
 }
 
 double* GetTensorValues(Tensor *t) {
