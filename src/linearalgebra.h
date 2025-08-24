@@ -11,6 +11,7 @@
 #define MATRIX3D 2
 
 #define TENSOR_WRITE_MAX_BUFF 50
+#define MATRIX_PRINT_BUFFER 500
 
 /*
 typedef union {
@@ -128,10 +129,12 @@ Tensor* NewTensorCloneMatrix3d(Matrix3d* m3d);
 Tensor* CloneTensorEmpty(Tensor *t);
 void CopyTensorValues(Tensor *tDst, Tensor *tSrc, _Bool checkTensorType); // Will check to make sure the sizes and types of tensors match
 void ZeroTensorValues(Tensor *t);
+void ZeroValues(double *values, unsigned int size);
 
 double* GetTensorValues(Tensor *t);
 double GetTensorValuePos(Tensor *t, unsigned int pos);
 unsigned int GetTensorMaxIndex(Tensor *t); //return the index of the largest value inside a tensor's values
+unsigned int GetTensorMinIndex(Tensor *t); //return the index of the largest value inside a tensor's values
 void FreeTensor(Tensor *t);
 
 void AveragePoolMatrix(Matrix *mDst, Matrix *mSrc, unsigned int poolSize);
@@ -140,6 +143,7 @@ void AveragePoolMatrix3d(Matrix3d *mDst, Matrix3d *mSrc, unsigned int poolSize);
 void MaxPoolMatrix3d(Matrix3d *mDst, Matrix3d *mSrc, unsigned int poolSize);
 
 void PrintMatrix(Matrix *m);
+void PrintMatrix3dSlice(Matrix3d *m3d, unsigned int slice);
 void ShadeMatrix(Matrix *m);
 void PrintVectorVertical(Vector *v);
 void PrintVectorHorizontal(Vector *v);

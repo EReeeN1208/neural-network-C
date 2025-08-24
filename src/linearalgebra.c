@@ -353,21 +353,21 @@ Matrix* TransposeMatrix(Matrix *m) {
 
 void ScaleVectorDouble(Vector *v, double s) {
     for (int i = 0; i < v->size; i++) {
-        v->values[i] = v->values[i] * s;
+        v->values[i] *= s;
     }
 }
 void ScaleMatrixDouble(Matrix *m, double s) {
     unsigned int size = m->r * m->c;
 
     for (int i = 0; i < size; i++) {
-        m->values[i] = m->values[i] * s;
+        m->values[i] *= s;
     }
 }
 void ScaleMatrix3dDouble(Matrix3d *m3d, double s) {
     unsigned int size = m3d->depth * m3d->r * m3d->c;
 
     for (int i = 0; i < size; i++) {
-        m3d->values[i] = m3d->values[i] * s;
+        m3d->values[i] *= s;
     }
 }
 
@@ -667,6 +667,12 @@ void ZeroTensorValues(Tensor *t) {
     }
 }
 
+void ZeroValues(double *values, unsigned int size) {
+    for (int i = 0; i<size; i++) {
+        values[i] = 0;
+    }
+}
+
 double* GetTensorValues(Tensor *t) {
     switch (t->uType) {
         case VECTOR: {
@@ -702,6 +708,21 @@ unsigned int GetTensorMaxIndex(Tensor *t) {
     for (unsigned int i = 1; i<t->size; i++) {
         if (tensorValues[i]>max) {
             max = tensorValues[i];
+            index = i;
+        }
+    }
+    return index;
+}
+
+unsigned int GetTensorMinIndex(Tensor *t) {
+    const double *tensorValues = GetTensorValues(t);
+
+    unsigned int index = 0;
+    double min = tensorValues[0];
+
+    for (unsigned int i = 1; i<t->size; i++) {
+        if (tensorValues[i]<min) {
+            min = tensorValues[i];
             index = i;
         }
     }
@@ -805,13 +826,31 @@ void MaxPoolMatrix3d(Matrix3d *mDst, Matrix3d *mSrc, unsigned int poolSize) {
 
 /* debug function */
 void PrintMatrix(Matrix *m) {
-    char* buffer = malloc(100 * sizeof(char));
+    char* buffer = malloc(MATRIX_PRINT_BUFFER * sizeof(char));
 
     printf("\n\n");
     for (int i = 0; i < m->r; i++) {
         strcpy(buffer, "| ");
         for (int j = 0; j < m->c; j++) {
-            sprintf(buffer, "%s %+8.4f", buffer , GetMatrixValueRowCol(m, i, j));
+            sprintf(buffer, "%s %+4.6f", buffer , GetMatrixValueRowCol(m, i, j));
+        }
+        sprintf(buffer, "%s  |\n", buffer);
+
+        printf(buffer);
+    }
+
+    free(buffer);
+}
+
+/* debug function */
+void PrintMatrix3dSlice(Matrix3d *m3d, unsigned int slice) {
+    char* buffer = malloc(MATRIX_PRINT_BUFFER * sizeof(char));
+
+    printf("\n\n");
+    for (int i = 0; i < m3d->r; i++) {
+        strcpy(buffer, "| ");
+        for (int j = 0; j < m3d->c; j++) {
+            sprintf(buffer, "%s %+4.6f", buffer , GetMatrix3DValueDepthRowCol(m3d, slice, i, j));
         }
         sprintf(buffer, "%s  |\n", buffer);
 
@@ -846,14 +885,14 @@ void ShadeMatrix(Matrix *m) {
 void PrintVectorVertical(Vector *v) {
     printf("\n\n");
     for (int i = 0; i < v->size; i++) {
-        printf("| %+8.4f |\n", v->values[i]);
+        printf("| %+8.8f |\n", v->values[i]);
     }
 }
 
 void PrintVectorHorizontal(Vector *v) {
-    printf("[%+8.4f", v->values[1]);
+    printf("[%+8.5f", v->values[0]);
     for (int i = 1; i < v->size; i++) {
-        printf(", %+12.4f", v->values[i]);
+        printf(", %+8.5f", v->values[i]);
     }
     printf("]\n");
 }

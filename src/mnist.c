@@ -93,7 +93,7 @@ double CalculateMnistLoss(Tensor* probabilities, Tensor* outputGradient, int dig
     for (int i = 0; i < MNIST_DIGIT_COUNT; i++) {
         double gradient = GetTensorValues(probabilities)[i] - oneHotVector[i];
         // clamp gradients to prevent explosion
-        gradient = fmax(-10.0, fmin(10.0, gradient));
+        //gradient = fmax(-10.0, fmin(10.0, gradient));
         GetTensorValues(outputGradient)[i] = gradient;
     }
 

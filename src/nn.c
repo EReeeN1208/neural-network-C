@@ -53,8 +53,30 @@ Layer* NewConvolutionLayer(unsigned int kernelCount, unsigned int kernelSize) {
     layer->convolutionLayer->kernelGradients = malloc(sizeof(Matrix*) * kernelCount);
     layer->convolutionLayer->kernelBiases = NewFilledVector(kernelCount, 0);
     for (int i = 0; i<kernelCount; i++) {
-        layer->convolutionLayer->kernels[i] = NewHeRandomMatrix(kernelSize, kernelSize);
         layer->convolutionLayer->kernelGradients[i] = NewFilledMatrix(kernelSize, kernelSize, 0);
+        layer->convolutionLayer->kernels[i] = NewHeRandomMatrix(kernelSize, kernelSize);
+        /*
+        switch (i % 4) {
+            case 0: {
+                layer->convolutionLayer->kernels[i] = NewHeRandomMatrix(kernelSize, kernelSize);
+                break;
+            }
+            case 1: {
+                layer->convolutionLayer->kernels[i] = NewHeRandomMatrix(kernelSize, kernelSize);
+                AddDoubleToMatrix(layer->convolutionLayer->kernels[i], 0.5);
+                break;
+            }
+            case 2: {
+                layer->convolutionLayer->kernels[i] = NewHeRandomMatrix(kernelSize, kernelSize);
+                AddDoubleToMatrix(layer->convolutionLayer->kernels[i], 1);
+                break;
+            }
+            case 3: {
+                layer->convolutionLayer->kernels[i] = NewFilledMatrix(kernelSize, kernelSize, 1);
+                break;
+            }
+        }
+        */
     }
 
     layer->computedValues = NULL;
@@ -436,7 +458,7 @@ void InitHiddenLayerTensor(Layer *previousLayer, Layer *layer) {
 
     error: {
         if (layer->uType == CONVOLUTION_LAYER || layer->uType == POOLING_LAYER) {
-            fprintf(stderr, "Error: Convolution and pooling layers only support layers with 3d matrices as inputs.\nUse a reshape layer to convert a 2d layer into a 3d layer. ComputeHiddenLayerGradients()");
+            fprintf(stderr, "Error: Convolution and pooling layers only support layers with 3d matrices as inputs.\nUse a reshape layer to convert a 2d layer into a 3d layer. InitHiddenLayerTensor()");
         } else {
             fprintf(stderr, "Error: invalid layer sequence. Prev: %d, Current: %d", previousLayer->uType, layer->uType);
         }
@@ -561,14 +583,23 @@ void ComputeLayerValues(Layer *previousLayer, Layer *layer) {
             double* previousValues = GetTensorValues(previousLayer->computedValues);
             double* values = GetTensorValues(layer->computedValues);
 
+            double max = previousValues[0];
+
+            for (int i = 1; i<previousLayer->computedValues->size; i++) {
+                if (previousValues[i] > max) {
+                    max = previousValues[i];
+                }
+            }
+
             double sum = 0;
 
             for (int i = 0; i<previousLayer->computedValues->size; i++) {
-                sum += exp(previousValues[i]);
+                values[i] = exp(previousValues[i] - max);
+                sum += values[i];
             }
 
             for (int i = 0; i<previousLayer->computedValues->size; i++) {
-                values[i] = exp(previousValues[i]) / sum;
+                values[i] /= sum;
             }
 
             break;
@@ -634,33 +665,54 @@ void ComputeHiddenLayerGradients(Layer *previousLayer, Layer *layer, Layer *proc
         }
         case CONVOLUTION_LAYER: {
 
+
+
             //this block is commented the hell out of because it was really complex the program. I left them in because maybe they will be helpful for someone
 
             unsigned int kernelSize = layer->convolutionLayer->kernelSize;
             unsigned int kernelCount = layer->convolutionLayer->kernelCount;
-            unsigned int inputMatrixCount = previousLayer->computedValues->matrix3d->depth;
 
-            unsigned int outputR = layer->computedValues->matrix3d->r;
-            unsigned int outputC = layer->computedValues->matrix3d->c;
+            /*
+            printf("\n\n\n=====start=====\n");
 
-            for (int i = 0; i<kernelCount; i++) {
-                Matrix *mWeightLosses = layer->convolutionLayer->kernelGradients[i];
-                double *values = mWeightLosses->values;
+            printf("old kernelBiases vector:");
+            PrintVectorHorizontal(layer->convolutionLayer->kernelBiases);
+
+            printf("\n\nold kernelGradients kernel 0");
+            PrintMatrix(layer->convolutionLayer->kernelGradients[0]);
+            */
+
+            for (int i = 0; i<kernelCount; i++) {//iterate over each kernel
+                Matrix *mWeightGradients = layer->convolutionLayer->kernelGradients[i]; //weight gradients of current kernel
+                ZeroValues(mWeightGradients->values, mWeightGradients->r * mWeightGradients->c);
 
                 double biasGradient = 0;
 
-                for (int r = 0; r<outputR; r++) {
-                    for (int c = 0; c<outputC; c++) {
-                        for (int d = 0; d<inputMatrixCount; d++) {
-                            for (int j = 0; j<kernelSize*kernelSize; j++) {
-                                values[j] += GetMatrix3DValueDepthRowCol(previousLayer->computedValues->matrix3d, d, r+(j/kernelSize), c+(j%kernelSize));
+                for (int r = 0; r<layer->computedValues->matrix3d->r; r++) {
+                    for (int c = 0; c<layer->computedValues->matrix3d->c; c++) {// these 2 loops iterate over each r,c pos of the output 3d matrix.
+                        for (int d = 0; d<previousLayer->computedValues->matrix3d->depth/*input matrix #*/; d++) { //this loop iterates the (r,c) over depth to access each (r,c) in the input matrice
+                            double upstreamGradient = GetMatrix3DValueDepthRowCol(layer->computedValueGradients->matrix3d, i*previousLayer->computedValues->matrix3d->depth + d, r, c);
+                            for (int j = 0; j<kernelSize*kernelSize; j++) { //this loop iterates over each kernel position
+                                double inputValue = GetMatrix3DValueDepthRowCol(previousLayer->computedValues->matrix3d, d, r+(j/kernelSize), c+(j%kernelSize));
+                                mWeightGradients->values[j] += inputValue * upstreamGradient;
                             }
-                            biasGradient += GetMatrix3DValueDepthRowCol(layer->computedValueGradients->matrix3d, d, r, c);
+                            biasGradient += upstreamGradient;
                         }
                     }
                 }
                 layer->convolutionLayer->kernelBiases->values[i] -= biasGradient*lr;
             }
+
+            /*
+            printf("\n\nnew kernelBiases vector:");
+            PrintVectorHorizontal(layer->convolutionLayer->kernelBiases);
+
+            printf("\n\nnew kernelGradients kernel 0");
+            PrintMatrix(layer->convolutionLayer->kernelGradients[0]);
+
+            printf("\n\nold computedValueGradients slice 0");
+            PrintMatrix3dSlice(previousLayer->computedValueGradients->matrix3d, 0);
+            */
 
             ZeroTensorValues(previousLayer->computedValueGradients);
 
@@ -692,15 +744,26 @@ void ComputeHiddenLayerGradients(Layer *previousLayer, Layer *layer, Layer *proc
                     }
                 }
             }
+            /*
+            printf("\n\nnew computedValueGradients slice 0");
+            PrintMatrix3dSlice(previousLayer->computedValueGradients->matrix3d, 0);
 
+            printf("\n\nold kernel: kernel 0");
+            PrintMatrix(layer->convolutionLayer->kernels[0]);
+            */
             for (int i = 0; i<kernelCount; i++) { //update weights at the end
-                Matrix *mWeightLosses = layer->convolutionLayer->kernelGradients[i];
+                Matrix *mWeightGradients = layer->convolutionLayer->kernelGradients[i];
                 Matrix *mWeights = layer->convolutionLayer->kernels[i];
 
-                ScaleMatrixDouble(mWeightLosses, -lr);
-                AddMatrix(mWeights, mWeightLosses);
+                ScaleMatrixDouble(mWeightGradients, lr);
+                AddMatrix(mWeights, mWeightGradients);
             }
+            /*
+            printf("\n\nnew kernel: kernel 0");
+            PrintMatrix(layer->convolutionLayer->kernels[0]);
 
+            printf("\n=====end=====\n\n");
+            */
             break;
         }
         case ELEMENTWISE_LAYER: {
@@ -994,6 +1057,23 @@ Tensor* RunNeuralNetwork(NeuralNetwork *nNet, Tensor *input) {
 }
 
 Tensor* NetworkTrainingStep(NeuralNetwork *nNet, Tensor *input, int expected, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected)) {
+    //convolutional neural network debug
+    /*
+    if (nNet->trainingStepCount % 200 == 0) {
+        int i = 0;
+        while (nNet->hiddenLayers[i]->uType != CONVOLUTION_LAYER) {
+            i++;
+        }
+        printf("bias:\n");
+        PrintVectorHorizontal(nNet->hiddenLayers[i]->convolutionLayer->kernelBiases);
+        printf("\n\nprinting kernels:\n");
+        for (int j = 0; j<nNet->hiddenLayers[i]->convolutionLayer->kernelCount; j++) {
+            PrintMatrix(nNet->hiddenLayers[i]->convolutionLayer->kernelGradients[j]);
+        }
+        printf("\n\nprinting kernels done:\n");
+    }
+    */
+
     nNet->trainingStepCount++;
 
     Tensor *netOutput = RunNeuralNetwork(nNet, input); //don't free netOutput. just a reference
@@ -1001,7 +1081,7 @@ Tensor* NetworkTrainingStep(NeuralNetwork *nNet, Tensor *input, int expected, do
 
     double loss = lossFunction(netOutput, nNet->outputLayer->computedValueGradients, expected);
 
-    if (nNet->trainingStepCount % 100 == 0) {
+    if (nNet->trainingStepCount % 20 == 0) {
         printf("\n===== Training Step %8d =====\n", nNet->trainingStepCount);
         printf("Actual: %d. Prediction: %d. Prediction Weight: %f\nOutput Vector: ", expected, GetTensorMaxIndex(netOutput), GetTensorValuePos(netOutput, GetTensorMaxIndex(netOutput)));
         PrintVectorHorizontal(netOutput->vector);
@@ -1029,10 +1109,10 @@ void TrainNetwork(NeuralNetwork *nNet, CSVFile *csvTrain, double (*lossFunction)
     }
     unsigned int trainingSteps = nNet->maxRoundSteps;
     if (trainingSteps == 0) {
-        trainingSteps = csvTrain->rows;
+        trainingSteps = csvTrain->rows-2;
     }
     if (trainingSteps>csvTrain->rows) {
-        trainingSteps = csvTrain->rows;
+        trainingSteps = csvTrain->rows-2;
     }
 
     MnistDigit *mnistDigit = NewMnistDigit();
@@ -1098,17 +1178,19 @@ int NeuralNetworkMain() {
 
     SetInputLayer(nNet, NewMatrixLayer(28, 28));
 
-    // Convolution Network (Convolutional layers and pooling layers are not implemented yet)
+    // Convolution Network
 
     AddHiddenLayer(nNet, NewReshapeLayer());
     AddHiddenLayer(nNet, NewConvolutionLayer(8, 3));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
     AddHiddenLayer(nNet, NewPoolingLayer(2, MAX_POOLING));
-    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
     AddHiddenLayer(nNet, NewFlatteningLayer());
-    AddHiddenLayer(nNet, NewLinearLayer(512));
-    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    //AddHiddenLayer(nNet, NewLinearLayer(512));
+    //AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
     AddHiddenLayer(nNet, NewLinearLayer(256));
     AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    //AddHiddenLayer(nNet, NewLinearLayer(128));
+    //AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
     AddHiddenLayer(nNet, NewLinearLayer(10));
     AddHiddenLayer(nNet, NewSoftMaxLayer());
 
