@@ -12,9 +12,9 @@
 
 #define MNIST_DIGIT_COUNT 10
 
-#define MNIST_LEARNING_RATE 0.01
+#define MNIST_LEARNING_RATE 0.001
 #define MNIST_TRAINING_ROUNDS 4
-#define MNIST_MAX_TRAINING_STEPS 30000
+#define MNIST_MAX_TRAINING_STEPS 0
 
 typedef struct {
     char digit;

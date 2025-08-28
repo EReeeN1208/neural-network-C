@@ -949,7 +949,7 @@ NeuralNetwork* NewNeuralNetwork(unsigned int trainingRounds, unsigned int maxRou
 
 void PrintNeuralNetworkInfo(NeuralNetwork *nNet) {
     printf("\nNeural Network '%s' info:\n", nNet->name);
-    printf("Stage: %d, Layer count: %d, Training Rounds: %d, Training Rounds Max Steps: %d, Learning Rate: %f\n", nNet->stage, nNet->hiddenLayerCount+2, nNet->trainingRounds, nNet->maxRoundSteps, nNet->learningRate);
+    printf("Stage: %d, Layer count: %d, Training Rounds: %d, Training Rounds Max Steps: %d, Learning Rate: %f, Training Steps Count: %d\n", nNet->stage, nNet->hiddenLayerCount+2, nNet->trainingRounds, nNet->maxRoundSteps, nNet->learningRate, nNet->trainingStepCount);
     printf("Network Layers:\n");
     PrintLayerInfo(nNet->inputLayer);
     for (int i = 0; i<nNet->hiddenLayerCount; i++) {
@@ -1181,7 +1181,7 @@ int NeuralNetworkMain() {
     // Convolution Network
 
     AddHiddenLayer(nNet, NewReshapeLayer());
-    AddHiddenLayer(nNet, NewConvolutionLayer(8, 3));
+    AddHiddenLayer(nNet, NewConvolutionLayer(16, 3));
     AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
     AddHiddenLayer(nNet, NewPoolingLayer(2, MAX_POOLING));
     AddHiddenLayer(nNet, NewFlatteningLayer());
