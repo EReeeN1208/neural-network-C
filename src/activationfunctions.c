@@ -2,7 +2,7 @@
 // Created by erenk on 7/24/2025.
 //
 
-#include "activationFunctions.h"
+#include "activationfunctions.h"
 
 #include <math.h>
 

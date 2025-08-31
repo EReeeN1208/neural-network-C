@@ -3,7 +3,7 @@
 #include <time.h>
 
 #include "linearalgebra.h"
-#include "activationFunctions.h"
+#include "activationfunctions.h"
 #include "nn.h"
 #include "tests.h"
 

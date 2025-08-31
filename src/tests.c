@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "activationFunctions.h"
+#include "activationfunctions.h"
 #include "csv.h"
 #include "linearalgebra.h"
 #include "mnist.h"
