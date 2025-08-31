@@ -112,6 +112,14 @@ typedef struct {
     Tensor *computedValueGradients;
 } Layer;
 
+typedef struct {
+    unsigned int trainingStep;
+    unsigned int totalCases;
+    unsigned int correct;
+    unsigned int incorrect;
+    double accuracy; //0-1
+    Matrix *classificationMatrix; // x/horizontal -> predicted class. y/vertical-> actual class
+} TestResult;
 
 typedef struct {
 
@@ -128,6 +136,8 @@ typedef struct {
     double learningRate;
 
     unsigned int trainingStepCount;
+
+    TestResult* highestTestResult;
 
 } NeuralNetwork;
 
@@ -182,11 +192,10 @@ void FinalizeNeuralNetworkLayers(NeuralNetwork *nNet); //Call after adding all l
 
 Tensor* RunNeuralNetwork(NeuralNetwork *nNet, Tensor *input); //Do not free the output tensor
 Tensor* NetworkTrainingStep(NeuralNetwork *nNet, Tensor *input, int expected, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected)); //Do not free the output tensor
-void TrainNetwork(NeuralNetwork *nNet, CSVFile *csvTrain, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected));
-void TestNetwork(NeuralNetwork  *nNet, CSVFile *csvTest, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected));
 
-
-int NeuralNetworkMain();
+void UpdateTestResult(TestResult* testResult, unsigned int correct, unsigned int incorrect);
+void PrintTestResult(TestResult* testResult);
+void FreeTestResult(TestResult* testResult);
 
 
 #endif //NN_H

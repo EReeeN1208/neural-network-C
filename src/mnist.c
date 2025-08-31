@@ -8,6 +8,7 @@
 #include <string.h>
 #include <tgmath.h>
 
+#include "nn.h"
 #include "util.h"
 
 
@@ -55,7 +56,106 @@ MnistDigit* NewMnistDigit() {
     return d;
 }
 
-double CalculateMnistLoss(Tensor* probabilities, Tensor* outputGradient, int digit) {
+void TrainNetworkMNIST(NeuralNetwork *nNet, CSVFile *csvTrain, CSVFile *csvTest, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected)) {
+    if (nNet->stage < NET_LAYERS_FINALIZED) {
+        fprintf(stderr, "Error: Attempted to train un-finalized neural network (stage %d). Required stage: >= 2", nNet->stage);
+        exit(EXIT_FAILURE_CODE);
+    }
+
+    if (nNet->highestTestResult == NULL) {
+        nNet->highestTestResult = NewTestResultMNIST();
+    }
+
+    unsigned int trainingSteps = nNet->maxRoundSteps;
+
+    if (trainingSteps == 0) {
+        trainingSteps = csvTrain->rows-2;
+    }
+    if (trainingSteps>csvTrain->rows) {
+        trainingSteps = csvTrain->rows-2;
+    }
+
+    MnistDigit *mnistDigit = NewMnistDigit();
+    RewindCSV(csvTrain);
+
+    for (int i = 0; i<nNet->trainingRounds; i++) {
+        SkipLine(csvTrain);
+        for (int j = 0; j<trainingSteps; j++) {
+            ReadDigitFromCSV(csvTrain, mnistDigit);
+
+            Tensor* inputTensor = NewTensorCloneMatrix(mnistDigit->pixels); //needs to be fred
+            Tensor *netOutput = NetworkTrainingStep(nNet, inputTensor, mnistDigit->digit, lossFunction); //does not need to be freed. it's just a reference to the net's output tensor
+            FreeTensor(inputTensor); //maybe optimize this later?
+
+            if (nNet->trainingStepCount % MNIST_TEST_TRAINING_STEP_INTERVAL == 0) {
+                RewindCSV(csvTest);
+                SkipLine(csvTest);
+
+                TestResult* testResult = TestNetworkMNIST(nNet, csvTest, CalculateLossMNIST);
+                if (testResult->accuracy > nNet->highestTestResult->accuracy) {
+                    FreeTestResult(nNet->highestTestResult);
+                    nNet->highestTestResult = testResult;
+                    nNet->highestTestResult->trainingStep = nNet->trainingStepCount;
+                } else {
+                    FreeTestResult(testResult);
+                }
+            }
+        }
+        RewindCSV(csvTrain);
+    }
+
+    FreeMnistDigit(mnistDigit);
+
+    nNet->stage = NET_TRAINED;
+}
+
+TestResult* TestNetworkMNIST(NeuralNetwork  *nNet, CSVFile *csvTest, double (*lossFunction)(Tensor *tOutput, Tensor *tOutputGradient, int expected)) {
+    if (nNet->stage < NET_LAYERS_FINALIZED) {
+        fprintf(stderr, "Error: Attempted to test un-finalized neural network (stage %d). Required stage: >= 1", nNet->stage);
+        exit(EXIT_FAILURE_CODE);
+    }
+    /*
+    if (nNet->stage < NET_TRAINED) {
+        fprintf(stderr, "Warning: Attempted to test un-trained neural network (stage %d). Required stage: >= 3", nNet->stage);
+        //exit(EXIT_FAILURE_CODE);
+    }
+    */
+
+    MnistDigit *mnistDigit = NewMnistDigit();
+    RewindCSV(csvTest);
+    SkipLine(csvTest);
+    unsigned int correct = 0;
+    unsigned int incorrect = 0;
+
+    TestResult* testResult = NewTestResultMNIST();
+
+    for (int i = 0; i<csvTest->rows; i++) {
+        ReadDigitFromCSV(csvTest, mnistDigit);
+
+        Tensor* inputTensor = NewTensorCloneMatrix(mnistDigit->pixels); //needs to be fred
+        Tensor *netOutput = RunNeuralNetwork(nNet, inputTensor); //don't free netOutput. just a reference
+
+        double loss = lossFunction(netOutput, nNet->outputLayer->computedValueGradients, mnistDigit->digit);
+
+        if (mnistDigit->digit == GetTensorMaxIndex(netOutput)) {
+            correct++;
+        } else {
+            incorrect++;
+        }
+
+        IncrementMatrixValueRowCol(testResult->classificationMatrix, mnistDigit->digit, GetTensorMaxIndex(netOutput), 1);
+
+        FreeTensor(inputTensor); //maybe optimize this later?
+    }
+
+    UpdateTestResult(testResult, correct, incorrect);
+
+    FreeMnistDigit(mnistDigit);
+
+    return testResult;
+}
+
+double CalculateLossMNIST(Tensor* probabilities, Tensor* outputGradient, int digit) {
     if (probabilities->size != MNIST_DIGIT_COUNT || outputGradient->size != MNIST_DIGIT_COUNT) {
         fprintf(stderr, "Error: tried to calculate MNIST loss for tensor with invalid sizes: %d, %d", probabilities->size, outputGradient->size);
         exit(EXIT_FAILURE_CODE);
@@ -100,6 +200,20 @@ double CalculateMnistLoss(Tensor* probabilities, Tensor* outputGradient, int dig
     return -1.0 * log(prob); //return loss value. not really necessary
 }
 
+TestResult* NewTestResultMNIST() {
+    TestResult* testResult = malloc(sizeof(TestResult));
+
+    testResult->trainingStep = 0;
+    testResult->totalCases = 0;
+    testResult->correct = 0;
+    testResult->incorrect = 0;
+    testResult->accuracy = 0;
+
+    testResult->classificationMatrix = NewEmptyMatrix(MNIST_DIGIT_COUNT, MNIST_DIGIT_COUNT);
+
+    return testResult;
+}
+
 void FreeMnistDigit(MnistDigit *d) {
     if (d->pixels != NULL) {
         FreeMatrix(d->pixels);
@@ -109,4 +223,20 @@ void FreeMnistDigit(MnistDigit *d) {
 
 void PrintMnistDigit(MnistDigit *d) {
     ShadeMatrix(d->pixels);
+}
+
+CSVFile* GetMNISTTestCSV() {
+    if (PLATFORM == PLATFORM_WINDOWS) {
+        return OpenCSVFile("..\\data\\mnist_test.csv");
+    } else {
+        return OpenCSVFile("../data/mnist_test.csv");
+    }
+}
+
+CSVFile* GetMNISTTrainCSV() {
+    if (PLATFORM == PLATFORM_WINDOWS) {
+        return OpenCSVFile("..\\data\\mnist_train.csv");
+    } else {
+        return OpenCSVFile("../data/mnist_train.csv");
+    }
 }

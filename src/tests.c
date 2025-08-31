@@ -4,12 +4,96 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "activationFunctions.h"
 #include "csv.h"
 #include "linearalgebra.h"
 #include "mnist.h"
 #include "util.h"
 
-//const int MAX_BUFF = 5000;
+int TestLinearNeuralNetworkMNIST(void) {
+
+    NeuralNetwork *nNet = NewNeuralNetwork(MNIST_TRAINING_ROUNDS, MNIST_MAX_TRAINING_STEPS, MNIST_LEARNING_RATE, "MNIST Linear Test");
+
+    SetInputLayer(nNet, NewMatrixLayer(28, 28));
+
+    AddHiddenLayer(nNet, NewReshapeLayer());
+    AddHiddenLayer(nNet, NewPoolingLayer(2, AVERAGE_POOLING));
+    AddHiddenLayer(nNet, NewFlatteningLayer());
+    AddHiddenLayer(nNet, NewLinearLayer(512));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    AddHiddenLayer(nNet, NewLinearLayer(256));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    AddHiddenLayer(nNet, NewLinearLayer(128));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    AddHiddenLayer(nNet, NewLinearLayer(10));
+    AddHiddenLayer(nNet, NewSoftMaxLayer());
+
+    SetOutputLayer(nNet, NewVectorLayer(10));
+
+    FinalizeNeuralNetworkLayers(nNet);
+
+    // CSV-MNIST
+    CSVFile *csvTrain = GetMNISTTrainCSV(); //csv file with data used to train the network (size = 60000)
+    CSVFile *csvTest = GetMNISTTestCSV(); //csv file with data used to test the trained network (size = 10000)
+
+    TrainNetworkMNIST(nNet, csvTrain, csvTest, CalculateLossMNIST);
+    PrintNeuralNetworkInfo(nNet);
+    TestResult* testResult = TestNetworkMNIST(nNet, csvTest, CalculateLossMNIST);
+
+    printf("Final Test Result:\n");
+    PrintTestResult(testResult);
+    printf("\nHighest Test Result:\n");
+    PrintTestResult(nNet->highestTestResult);
+
+    //Cleanup
+    FreeTestResult(testResult);
+    FreeNeuralNetwork(nNet);
+    FreeCSV(csvTrain);
+    FreeCSV(csvTest);
+
+    return 0;
+}
+int TestConvolutionalNeuralNetworkMNIST(void) {
+
+    NeuralNetwork *nNet = NewNeuralNetwork(MNIST_TRAINING_ROUNDS, MNIST_MAX_TRAINING_STEPS, MNIST_LEARNING_RATE, "MNIST Convolutional Test");
+
+    SetInputLayer(nNet, NewMatrixLayer(28, 28));
+
+    AddHiddenLayer(nNet, NewReshapeLayer());
+    AddHiddenLayer(nNet, NewConvolutionLayer(16, 3));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    AddHiddenLayer(nNet, NewPoolingLayer(2, MAX_POOLING));
+    AddHiddenLayer(nNet, NewFlatteningLayer());
+    AddHiddenLayer(nNet, NewLinearLayer(256));
+    AddHiddenLayer(nNet, NewElementWiseLayer(Relu, ReluPrime));
+    AddHiddenLayer(nNet, NewLinearLayer(10));
+    AddHiddenLayer(nNet, NewSoftMaxLayer());
+
+    SetOutputLayer(nNet, NewVectorLayer(10));
+
+    FinalizeNeuralNetworkLayers(nNet);
+
+    // CSV-MNIST
+    CSVFile *csvTrain = GetMNISTTrainCSV(); //csv file with data used to train the network (size = 60000)
+    CSVFile *csvTest = GetMNISTTestCSV(); //csv file with data used to test the trained network (size = 10000)
+
+    TrainNetworkMNIST(nNet, csvTrain, csvTest, CalculateLossMNIST);
+    PrintNeuralNetworkInfo(nNet);
+    TestResult* testResult = TestNetworkMNIST(nNet, csvTest, CalculateLossMNIST);
+
+    printf("Final Test Result:\n");
+    PrintTestResult(testResult);
+    printf("\nHighest Test Result:\n");
+    PrintTestResult(nNet->highestTestResult);
+
+    //Cleanup
+    FreeTestResult(testResult);
+    FreeNeuralNetwork(nNet);
+    FreeCSV(csvTrain);
+    FreeCSV(csvTest);
+
+    return 0;
+}
 
 int RunAllTests(void) {
     return TestConvolution() + TestUtil() + TestMnist() + TestCSV() + TestLinearAlgebra();

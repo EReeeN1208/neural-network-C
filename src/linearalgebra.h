@@ -104,6 +104,7 @@ double GetMatrixValueRowCol(Matrix *m, unsigned int r, unsigned int c);
 double GetMatrixValuePos(Matrix *m, unsigned int pos);
 void SetMatrixValueRowCol(Matrix *m, unsigned int r, unsigned int c, double value);
 void SetMatrixValuePos(Matrix *m, unsigned int pos, double value);
+void IncrementMatrixValueRowCol(Matrix *m, unsigned int r, unsigned int c, double increment);
 
 double GetMatrix3DValueDepthRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c);
 double GetMatrix3DValuePos(Matrix3d *m3d, unsigned int pos);

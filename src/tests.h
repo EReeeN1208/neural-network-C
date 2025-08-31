@@ -5,8 +5,10 @@
 #ifndef TESTS_H
 #define TESTS_H
 
+int TestLinearNeuralNetworkMNIST(void);
+int TestConvolutionalNeuralNetworkMNIST(void);
 
-int RunAllTests(void);
+int RunAllTests(void); //does not run the neural network tests
 
 int TestConvolution(void);
 int TestUtil(void);

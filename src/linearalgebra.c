@@ -14,7 +14,7 @@
 Vector* NewEmptyVector(unsigned int size) {
     Vector *v = malloc(sizeof(Vector));
     v->size = size;
-    v->values = malloc(size * sizeof(double));
+    v->values = calloc(size, sizeof(double));
 
     return v;
 }
@@ -64,7 +64,7 @@ Matrix* NewEmptyMatrix(unsigned int r, unsigned int c) {
     const unsigned int size = r * c;
     m->r = r;
     m->c = c;
-    m->values = malloc(size * sizeof(double));
+    m->values = calloc(size, sizeof(double));
 
     return m;
 }
@@ -107,7 +107,7 @@ Matrix* NewRandomisedMatrix(unsigned int r, unsigned int c) {
 }
 
 Matrix* GetIdentityMatrix(unsigned int len) {
-    Matrix *m = NewFilledMatrix(len, len, 0);
+    Matrix *m = NewEmptyMatrix(len, len);
     for (unsigned i = 0; i < len*len; i += (len + 1)) {
         m->values[i] = 1;
     }
@@ -157,7 +157,7 @@ Matrix3d* NewEmptyMatrix3d(unsigned int depth, unsigned int r, unsigned int c) {
     m->r = r;
     m->c = c;
 
-    m->values = malloc(size * sizeof(double));
+    m->values = calloc(size, sizeof(double));
 
     return m;
 }
@@ -439,6 +439,14 @@ void SetMatrixValuePos(Matrix *m, unsigned int pos, double value) {
     m->values[pos] = value;
 }
 
+void IncrementMatrixValueRowCol(Matrix *m, unsigned int r, unsigned int c, double increment) {
+    if (r >= m->r || c >= m->c) {
+        fprintf(stderr, "Error during matrix value set w/ r-c. Matrix size: %dx%d, Tried to set: %dx%d", m->r, m->c, r, c);
+        exit(EXIT_FAILURE_CODE);
+    }
+    m->values[r*m->c + c] += increment;
+}
+
 
 
 double GetMatrix3DValueDepthRowCol(Matrix3d *m3d, unsigned int depth, unsigned int r, unsigned int c) {
@@ -525,7 +533,7 @@ Matrix* GetIdentityKernel(unsigned int size) {
         fprintf(stderr, "Invalid convolution identity matrix size %d", size);
         exit(EXIT_FAILURE_CODE);
     }
-    Matrix *m = NewFilledMatrix(size, size, 0);
+    Matrix *m = NewEmptyMatrix(size, size);
     SetMatrixValueRowCol(m, size/2, size/2, 1);
     return m;
 }
@@ -610,15 +618,15 @@ Tensor* CloneTensorEmpty(Tensor *t) {
 
     switch (t->uType) {
         case VECTOR: {
-            tNew->vector = NewFilledVector(t->vector->size, 0);
+            tNew->vector = NewEmptyVector(t->vector->size);
             break;
         }
         case MATRIX2D: {
-            tNew->matrix2d = NewFilledMatrix(t->matrix2d->r, t->matrix2d->c, 0);
+            tNew->matrix2d = NewEmptyMatrix(t->matrix2d->r, t->matrix2d->c);
             break;
         }
         case MATRIX3D: {
-            tNew->matrix3d = NewFilledMatrix3d(t->matrix3d->depth, t->matrix3d->r, t->matrix3d->c, 0);
+            tNew->matrix3d = NewEmptyMatrix3d(t->matrix3d->depth, t->matrix3d->r, t->matrix3d->c);
             break;
         }
         default: {
