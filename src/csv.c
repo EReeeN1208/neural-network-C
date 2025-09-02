@@ -6,9 +6,16 @@
 
 #include <stdlib.h>
 
+#include "util.h"
+
 
 CSVFile* OpenCSVFile(char *path) {
     FILE* file = fopen(path, "r");
+
+    if (file == NULL) {
+        fprintf(stderr, "unable to read csv file located at %s\n", path);
+        exit(EXIT_FAILURE_CODE);
+    }
 
     unsigned int lines = CountLines(path);
 
@@ -57,11 +64,6 @@ void RewindCSV(CSVFile* csvfile) {
 
 unsigned int CountLines(char *path) {
     FILE* file = fopen(path, "r");
-
-    if (file == NULL) {
-        fprintf(stderr, "unable to read csv file located at %s", path);
-        return 0;
-    }
 
     unsigned int lines = 0;
     int ch = 0;

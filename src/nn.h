@@ -36,6 +36,7 @@
 #define NET_TRAINED 3
 
 #define LAYER_WRITE_MAX_BUFF 30
+#define NETWORK_PRINT_TRAINING_STEP_INTERVAL 100
 
 //Note to self
 //Weights format:

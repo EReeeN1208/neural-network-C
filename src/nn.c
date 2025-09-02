@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "activationFunctions.h"
+#include "activationfunctions.h"
 #include "csv.h"
 #include "mnist.h"
 #include "util.h"
@@ -948,7 +948,7 @@ NeuralNetwork* NewNeuralNetwork(unsigned int trainingRounds, unsigned int maxRou
 }
 
 void PrintNeuralNetworkInfo(NeuralNetwork *nNet) {
-    printf("\nNeural Network '%s' info:\n", nNet->name);
+    printf("Neural Network '%s' info:\n", nNet->name);
     printf("Stage: %d, Layer count: %d, Training Rounds: %d, Training Rounds Max Steps: %d, Learning Rate: %f, Training Steps Count: %d\n", nNet->stage, nNet->hiddenLayerCount+2, nNet->trainingRounds, nNet->maxRoundSteps, nNet->learningRate, nNet->trainingStepCount);
     printf("Network Layers:\n");
     PrintLayerInfo(nNet->inputLayer);
@@ -1082,7 +1082,7 @@ Tensor* NetworkTrainingStep(NeuralNetwork *nNet, Tensor *input, int expected, do
 
     double loss = lossFunction(netOutput, nNet->outputLayer->computedValueGradients, expected);
 
-    if (nNet->trainingStepCount % 20 == 0) {
+    if (nNet->trainingStepCount % NETWORK_PRINT_TRAINING_STEP_INTERVAL == 0) {
         printf("\n===== Training Step %8d =====\n", nNet->trainingStepCount);
         printf("Actual: %d. Prediction: %d. Prediction Weight: %f\nOutput Vector: ", expected, GetTensorMaxIndex(netOutput), GetTensorValuePos(netOutput, GetTensorMaxIndex(netOutput)));
         PrintVectorHorizontal(netOutput->vector);

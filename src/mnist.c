@@ -62,6 +62,9 @@ void TrainNetworkMNIST(NeuralNetwork *nNet, CSVFile *csvTrain, CSVFile *csvTest,
         exit(EXIT_FAILURE_CODE);
     }
 
+    printf("Beginning to train network:\n");
+    PrintNeuralNetworkInfo(nNet);
+
     if (nNet->highestTestResult == NULL) {
         nNet->highestTestResult = NewTestResultMNIST();
     }
@@ -229,7 +232,7 @@ CSVFile* GetMNISTTestCSV() {
     if (PLATFORM == PLATFORM_WINDOWS) {
         return OpenCSVFile("..\\data\\mnist_test.csv");
     } else {
-        return OpenCSVFile("../data/mnist_test.csv");
+        return OpenCSVFile("./../data/mnist_test.csv");
     }
 }
 
@@ -237,6 +240,6 @@ CSVFile* GetMNISTTrainCSV() {
     if (PLATFORM == PLATFORM_WINDOWS) {
         return OpenCSVFile("..\\data\\mnist_train.csv");
     } else {
-        return OpenCSVFile("../data/mnist_train.csv");
+        return OpenCSVFile("./../data/mnist_train.csv");
     }
 }

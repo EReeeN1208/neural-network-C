@@ -844,7 +844,7 @@ void PrintMatrix(Matrix *m) {
         }
         sprintf(buffer, "%s  |\n", buffer);
 
-        printf(buffer);
+        printf("%s", buffer);
     }
 
     free(buffer);
@@ -862,7 +862,7 @@ void PrintMatrix3dSlice(Matrix3d *m3d, unsigned int slice) {
         }
         sprintf(buffer, "%s  |\n", buffer);
 
-        printf(buffer);
+        printf("%s", buffer);
     }
 
     free(buffer);
