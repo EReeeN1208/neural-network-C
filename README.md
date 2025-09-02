@@ -12,11 +12,17 @@ However, there are aspects that could still be worked on.
 I've noticed that larger convolutional networks can sometimes experience vanishing gradients.
 There are also some other features that I believe could be implemented, such as GPU Support, a Dropout Layer and Network & Parameter saving/loading
 
+## Building:
+
+run `scripts/build_unix.sh` to build for linux and macos. the project will be built to `build/`and zipped to `out/`
+
 ## Training Data
 
 Dataset: [Mnist](https://www.kaggle.com/datasets/oddrationale/mnist-in-csv)
 
 The data CSV Files were too large for GitHub. Extract the `mnist.zip` archive in `/data` into `/data`.
+
+Note: the `prepare_data_unix.sh` is for builds. You will have to manually extract the csvs to run on the program for development. 
 
 ## Project Structure
 
