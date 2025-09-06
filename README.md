@@ -33,6 +33,10 @@ data
 ├── mnist.zip
 ├── mnist_test.csv --> unzip mnist.zip
 └── mnist_train.csv --> unzip mnist.zip
+scripts
+├── build_unix.sh --> builds project for mac/linux
+├── prepare_data_unix.sh --> copied into the build - not for use in/during development
+└── run_unix.sh --> copied into the build - not for us in/during development
 src
 ├── activationfunctions.h --> contains activation functions and their derivatives
 ├── csv.h --> contains code for opening, reading and parsing CSV files
@@ -52,5 +56,4 @@ src
 - [ ] Implement Network & Parameter serialization & deserialization (saving/loading)
 - [ ] Optimize Network Training/Execution (Perhaps cuda?)
 - [ ] Better interface/ui/visualisation
-- [ ] Finish Readme (running, documentation, hindsight...)
 - [ ] Refactor uType macros into enums (?)
